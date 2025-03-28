@@ -190,7 +190,7 @@ function Vendors() {
                   flexWrap="wrap"
                 >
                   <MDTypography variant="h6" color="black">
-                    Vendors Table
+                    Vendors
                   </MDTypography>
                   <MDBox display="flex" gap={2} flexWrap="wrap">
                     <TextField

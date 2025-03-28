@@ -495,7 +495,7 @@ function Orders() {
                   flexWrap="wrap"
                 >
                   <MDTypography variant="h6" color="black">
-                    Order Management
+                    Order
                   </MDTypography>
                   <MDBox display="flex" gap={2} flexWrap="wrap" alignItems="center">
                     <FormControl sx={{ minWidth: 150 }} size="small">

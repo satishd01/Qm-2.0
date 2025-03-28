@@ -332,7 +332,7 @@ function LabTests() {
                   flexWrap="wrap"
                 >
                   <MDTypography variant="h6" color="black">
-                    Lab Tests Management
+                    Lab Tests
                   </MDTypography>
                   <MDBox display="flex" gap={2} flexWrap="wrap">
                     <TextField

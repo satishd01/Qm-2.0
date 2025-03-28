@@ -245,7 +245,7 @@ function Coupons() {
                   flexWrap="wrap"
                 >
                   <MDTypography variant="h6" color="black">
-                    Coupons Management
+                    Coupons
                   </MDTypography>
                   <MDBox display="flex" gap={2} flexWrap="wrap">
                     <TextField

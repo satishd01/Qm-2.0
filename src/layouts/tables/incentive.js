@@ -108,7 +108,7 @@ function Incentives() {
                   flexWrap="wrap"
                 >
                   <MDTypography variant="h6" color="black">
-                    Incentives Table
+                    Incentives
                   </MDTypography>
                   <MDBox display="flex" gap={2} flexWrap="wrap">
                     <TextField

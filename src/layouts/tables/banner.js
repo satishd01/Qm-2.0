@@ -293,7 +293,7 @@ function Banners() {
                   flexWrap="wrap"
                 >
                   <MDTypography variant="h6" color="black">
-                    Banners Management
+                    Banners
                   </MDTypography>
                   <MDBox display="flex" gap={2} flexWrap="wrap">
                     <TextField

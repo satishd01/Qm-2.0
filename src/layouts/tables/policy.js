@@ -175,7 +175,7 @@ function Policies() {
                   flexWrap="wrap"
                 >
                   <MDTypography variant="h6" color="black">
-                    Policies Table
+                    Policies
                   </MDTypography>
                   <MDBox display="flex" gap={2} flexWrap="wrap">
                     <TextField

@@ -255,7 +255,7 @@ function Charges() {
                   flexWrap="wrap"
                 >
                   <MDTypography variant="h6" color="black">
-                    Charges Management
+                    Charges
                   </MDTypography>
                   <MDBox display="flex" gap={2} flexWrap="wrap">
                     <TextField

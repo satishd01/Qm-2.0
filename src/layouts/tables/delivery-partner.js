@@ -442,7 +442,7 @@ function DeliveryPartners() {
                   flexWrap="wrap"
                 >
                   <MDTypography variant="h6" color="black">
-                    Delivery Partners Management
+                    Delivery Partner
                   </MDTypography>
                   <MDBox display="flex" gap={2} flexWrap="wrap">
                     <TextField
