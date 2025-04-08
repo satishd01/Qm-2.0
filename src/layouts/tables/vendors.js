@@ -34,15 +34,15 @@ function Vendors() {
     deviceToken: "",
     name: "",
     email: "",
+    vendor_type: "Medicine Vendor", // Default vendor type
   });
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(5); // Default page size
+  const [pageSize, setPageSize] = useState(5);
   const [totalPages, setTotalPages] = useState(1);
+  const [selectedVendorType, setSelectedVendorType] = useState("Medicine Vendor");
 
-  // Get the base URL from the environment variable or use a default value
   const baseUrl = process.env.REACT_APP_BASE_URL || "https://quickmeds.sndktech.online";
 
-  // Define handleOpen and handleClose functions
   const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);
 
@@ -54,8 +54,11 @@ function Vendors() {
           console.error("No token found, please login again");
           return;
         }
+
+        // URL encode the vendor type
+        const encodedVendorType = encodeURIComponent(selectedVendorType);
         const response = await fetch(
-          `${baseUrl}/vendor.get1?vendor_type=Medicine%20Vendor&page=${currentPage}&page_size=${pageSize}&search=${searchTerm}`,
+          `${baseUrl}/vendor.get1?vendor_type=${encodedVendorType}&page=${currentPage}&page_size=${pageSize}&search=${searchTerm}`,
           {
             headers: {
               "x-authorization": "RGVlcGFrS3-VzaHdhaGE5Mzk5MzY5ODU0-QWxoblBvb2ph",
@@ -63,10 +66,11 @@ function Vendors() {
             },
           }
         );
+
         const data = await response.json();
         if (data && data.vendors) {
           setVendors(data.vendors);
-          setTotalPages(data.totalPages);
+          setTotalPages(data.totalPages || 1);
         } else {
           console.error("No vendor data found in the response.");
         }
@@ -78,12 +82,12 @@ function Vendors() {
     };
 
     fetchVendors();
-  }, [currentPage, pageSize, searchTerm]);
+  }, [currentPage, pageSize, searchTerm, selectedVendorType]);
 
   const handleCreateVendor = async () => {
     try {
       const token = localStorage.getItem("token");
-      setLoading(true); // Set loading state
+      setLoading(true);
 
       if (!token) {
         window.alert("No token found, please login again");
@@ -106,11 +110,12 @@ function Vendors() {
       if (response.ok) {
         window.alert("Vendor created successfully!");
         handleClose();
-        setCurrentPage(1); // Reset to first page
+        setCurrentPage(1);
 
         // Refresh the vendor list
+        const encodedVendorType = encodeURIComponent(selectedVendorType);
         const refreshResponse = await fetch(
-          `${baseUrl}/vendor.get1?vendor_type=Medicine%20Vendor&page=1&page_size=${pageSize}`,
+          `${baseUrl}/vendor.get1?vendor_type=${encodedVendorType}&page=1&page_size=${pageSize}`,
           {
             headers: {
               "x-authorization": "RGVlcGFrS3-VzaHdhaGE5Mzk5MzY5ODU0-QWxoblBvb2ph",
@@ -121,7 +126,7 @@ function Vendors() {
         const refreshData = await refreshResponse.json();
         if (refreshData && refreshData.vendors) {
           setVendors(refreshData.vendors);
-          setTotalPages(refreshData.totalPages);
+          setTotalPages(refreshData.totalPages || 1);
         }
       } else {
         window.alert("Error: " + (data.message || "Failed to create vendor"));
@@ -130,7 +135,7 @@ function Vendors() {
       console.error("Error creating vendor:", error);
       window.alert("Error creating vendor. Please try again.");
     } finally {
-      setLoading(false); // Clear loading state
+      setLoading(false);
     }
   };
 
@@ -192,20 +197,27 @@ function Vendors() {
                   <MDTypography variant="h6" color="black">
                     Vendors
                   </MDTypography>
-                  <MDBox display="flex" gap={2} flexWrap="wrap">
+                  <MDBox display="flex" gap={2} flexWrap="wrap" alignItems="center">
+                    <FormControl sx={{ minWidth: 200 }} size="small">
+                      <InputLabel>Vendor Type</InputLabel>
+                      <Select
+                        value={selectedVendorType}
+                        label="Vendor Type"
+                        onChange={(e) => {
+                          setSelectedVendorType(e.target.value);
+                          setCurrentPage(1); // Reset to first page when changing vendor type
+                        }}
+                      >
+                        <MenuItem value="Medicine Vendor">Medicine Vendor</MenuItem>
+                        <MenuItem value="Lab Vendor">Lab Vendor</MenuItem>
+                      </Select>
+                    </FormControl>
                     <TextField
                       label="Search by Vendor Name or Email"
                       type="text"
-                      fullWidth
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
-                      sx={{
-                        mr: 2,
-                        width: { xs: "100%", sm: 200 },
-                        [theme.breakpoints.down("sm")]: {
-                          marginBottom: 2,
-                        },
-                      }}
+                      sx={{ width: 300 }}
                     />
                     <Button variant="contained" color="error" onClick={handleOpen}>
                       Create Vendor
@@ -235,54 +247,72 @@ function Vendors() {
         </Grid>
       </MDBox>
       <Footer />
-      <Dialog open={open} onClose={handleClose}>
+      <Dialog open={open} onClose={handleClose} fullWidth maxWidth="sm">
         <DialogTitle>Create New Vendor</DialogTitle>
         <DialogContent>
           <TextField
             autoFocus
             margin="dense"
-            id="name"
             label="Name"
             type="text"
             fullWidth
-            variant="standard"
+            variant="outlined"
             value={newVendor.name}
             onChange={(e) => setNewVendor({ ...newVendor, name: e.target.value })}
+            sx={{ mt: 2 }}
           />
           <TextField
             margin="dense"
-            id="phoneNumber"
             label="Phone Number"
             type="text"
             fullWidth
-            variant="standard"
+            variant="outlined"
             value={newVendor.phoneNumber}
             onChange={(e) => setNewVendor({ ...newVendor, phoneNumber: e.target.value })}
+            sx={{ mt: 1 }}
           />
           <TextField
             margin="dense"
-            id="email"
             label="Email"
-            type="text"
+            type="email"
             fullWidth
-            variant="standard"
+            variant="outlined"
             value={newVendor.email}
             onChange={(e) => setNewVendor({ ...newVendor, email: e.target.value })}
+            sx={{ mt: 1 }}
           />
           <TextField
             margin="dense"
-            id="deviceToken"
             label="Device Token"
             type="text"
             fullWidth
-            variant="standard"
+            variant="outlined"
             value={newVendor.deviceToken}
             onChange={(e) => setNewVendor({ ...newVendor, deviceToken: e.target.value })}
+            sx={{ mt: 1 }}
           />
+          <FormControl fullWidth sx={{ mt: 1 }}>
+            <InputLabel>Vendor Type</InputLabel>
+            <Select
+              value={newVendor.vendor_type}
+              label="Vendor Type"
+              onChange={(e) => setNewVendor({ ...newVendor, vendor_type: e.target.value })}
+            >
+              <MenuItem value="Medicine Vendor">Medicine Vendor</MenuItem>
+              <MenuItem value="Lab Vendor">Lab Vendor</MenuItem>
+            </Select>
+          </FormControl>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleClose}>Cancel</Button>
-          <Button onClick={handleCreateVendor}>Create</Button>
+          <Button
+            onClick={handleCreateVendor}
+            color="error"
+            variant="contained"
+            disabled={!newVendor.name || !newVendor.phoneNumber || !newVendor.email}
+          >
+            Create Vendor
+          </Button>
         </DialogActions>
       </Dialog>
     </DashboardLayout>

@@ -1,3 +1,4 @@
+/* eslint-disable react/prop-types */
 import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "@mui/material/styles";
@@ -41,6 +42,8 @@ import {
   Close as CloseIcon,
   ArrowBack as ArrowBackIcon,
   ArrowForward as ArrowForwardIcon,
+  PictureAsPdf as PdfIcon,
+  Image as ImageIcon,
 } from "@mui/icons-material";
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
@@ -111,6 +114,38 @@ StatusCell.propTypes = {
   value: PropTypes.string.isRequired,
 };
 
+const FileViewCell = ({ value, type }) => {
+  if (!value) return <Typography variant="body2">N/A</Typography>;
+
+  const isPdf = value.toLowerCase().endsWith(".pdf");
+  const icon = isPdf ? <PdfIcon color="error" /> : <ImageIcon color="primary" />;
+
+  return (
+    <Button
+      startIcon={icon}
+      onClick={() =>
+        window.open(
+          `${process.env.REACT_APP_BASE_URL || "https://quickmeds.sndktech.online"}${value}`,
+          "_blank"
+        )
+      }
+      size="small"
+      variant="outlined"
+    >
+      View {type}
+    </Button>
+  );
+};
+
+FileViewCell.propTypes = {
+  value: PropTypes.string,
+  type: PropTypes.string.isRequired,
+};
+
+FileViewCell.defaultProps = {
+  value: null,
+};
+
 function Orders() {
   const navigate = useNavigate();
   const theme = useTheme();
@@ -153,6 +188,11 @@ function Orders() {
     open: false,
     images: [],
     currentIndex: 0,
+  });
+  const [fileViewerModal, setFileViewerModal] = useState({
+    open: false,
+    url: "",
+    type: "",
   });
 
   const baseUrl = process.env.REACT_APP_BASE_URL || "https://quickmeds.sndktech.online";
@@ -461,6 +501,22 @@ function Orders() {
     }));
   };
 
+  const handleOpenFileViewer = (url, type) => {
+    setFileViewerModal({
+      open: true,
+      url: url,
+      type: type,
+    });
+  };
+
+  const handleCloseFileViewer = () => {
+    setFileViewerModal({
+      open: false,
+      url: "",
+      type: "",
+    });
+  };
+
   const columns = [
     { Header: "Order ID", accessor: "orderId" },
     {
@@ -468,44 +524,54 @@ function Orders() {
       accessor: "user",
       Cell: CustomerCell,
     },
-    { Header: "Address", accessor: "address" },
-    { Header: "Amount", accessor: "amount" },
+    // { Header: "Address", accessor: "address" },
+    // { Header: "Amount", accessor: "amount" },
     { Header: "Order Date", accessor: "createdAt" },
+    // {
+    //   Header: "Status",
+    //   accessor: "status",
+    //   Cell: StatusCell,
+    // },
     {
-      Header: "Status",
-      accessor: "status",
-      Cell: StatusCell,
+      Header: "Invoice",
+      accessor: "invoice",
+      Cell: ({ value }) => <FileViewCell value={value} type="Invoice" />,
     },
     {
-      Header: "Details",
-      accessor: "actions",
-      Cell: ({ row }) => (
-        <Box>
-          <IconButton
-            onClick={() => setDialogState({ viewOpen: true, currentOrder: row.original })}
-            size="small"
-          >
-            <VisibilityIcon color="info" />
-          </IconButton>
-          {row.original.status === "Pending" && (
-            <>
-              <IconButton
-                onClick={() => handleStatusChange(row.original.id, "Accepted")}
-                size="small"
-              >
-                <CheckCircleIcon color="success" />
-              </IconButton>
-              <IconButton
-                onClick={() => handleStatusChange(row.original.id, "Rejected")}
-                size="small"
-              >
-                <CancelIcon color="error" />
-              </IconButton>
-            </>
-          )}
-        </Box>
-      ),
+      Header: "Lab Report",
+      accessor: "labReport",
+      Cell: ({ value }) => <FileViewCell value={value} type="Lab Report" />,
     },
+    // {
+    //   Header: "Actions",
+    //   accessor: "actions",
+    //   Cell: ({ row }) => (
+    //     <Box>
+    //       <IconButton
+    //         onClick={() => setDialogState({ viewOpen: true, currentOrder: row.original })}
+    //         size="small"
+    //       >
+    //         <VisibilityIcon color="info" />
+    //       </IconButton>
+    //       {row.original.status === "Pending" && (
+    //         <>
+    //           <IconButton
+    //             onClick={() => handleStatusChange(row.original.id, "Accepted")}
+    //             size="small"
+    //           >
+    //             <CheckCircleIcon color="success" />
+    //           </IconButton>
+    //           <IconButton
+    //             onClick={() => handleStatusChange(row.original.id, "Rejected")}
+    //             size="small"
+    //           >
+    //             <CancelIcon color="error" />
+    //           </IconButton>
+    //         </>
+    //       )}
+    //     </Box>
+    //   ),
+    // },
   ];
 
   const filteredOrders = state.orders.filter((order) => {
@@ -555,7 +621,7 @@ function Orders() {
                   flexWrap="wrap"
                 >
                   <MDTypography variant="h6" color="black">
-                    Order
+                    Lab report and Invoice
                   </MDTypography>
                   <MDBox display="flex" gap={2} flexWrap="wrap" alignItems="center">
                     <FormControl sx={{ minWidth: 150 }} size="small">
@@ -684,7 +750,7 @@ function Orders() {
                   </Table>
                 </TableContainer>
 
-                {dialogState.currentOrder.prescription && (
+                {dialogState.currentOrder.prescription?.length > 0 && (
                   <Box mt={3}>
                     <MDTypography variant="h6">Prescription</MDTypography>
                     <Button
@@ -697,6 +763,38 @@ function Orders() {
                     >
                       View Prescription Images ({dialogState.currentOrder.prescription.length})
                     </Button>
+                  </Box>
+                )}
+
+                {(dialogState.currentOrder.invoice || dialogState.currentOrder.labReport) && (
+                  <Box mt={3}>
+                    <MDTypography variant="h6">Documents</MDTypography>
+                    <Box display="flex" gap={2} mt={2}>
+                      {dialogState.currentOrder.invoice && (
+                        <Button
+                          color="error"
+                          variant="contained"
+                          startIcon={<PdfIcon />}
+                          onClick={() =>
+                            handleOpenFileViewer(dialogState.currentOrder.invoice, "Invoice")
+                          }
+                        >
+                          View Invoice
+                        </Button>
+                      )}
+                      {dialogState.currentOrder.labReport && (
+                        <Button
+                          color="error"
+                          variant="contained"
+                          startIcon={<PdfIcon />}
+                          onClick={() =>
+                            handleOpenFileViewer(dialogState.currentOrder.labReport, "Lab Report")
+                          }
+                        >
+                          View Lab Report
+                        </Button>
+                      )}
+                    </Box>
                   </Box>
                 )}
               </Grid>
@@ -904,6 +1002,81 @@ function Orders() {
               ))}
             </Box>
           )}
+        </Box>
+      </Modal>
+
+      {/* File Viewer Modal */}
+      <Modal
+        open={fileViewerModal.open}
+        onClose={handleCloseFileViewer}
+        aria-labelledby="file-viewer-modal"
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          backdropFilter: "blur(4px)",
+        }}
+      >
+        <Box
+          sx={{
+            position: "relative",
+            width: "90vw",
+            height: "90vh",
+            bgcolor: "background.paper",
+            boxShadow: 24,
+            p: 4,
+            borderRadius: 2,
+            outline: "none",
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          <IconButton
+            onClick={handleCloseFileViewer}
+            sx={{
+              position: "absolute",
+              top: 8,
+              right: 8,
+              color: "text.primary",
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+
+          <Typography variant="h6" gutterBottom>
+            Viewing {fileViewerModal.type}
+          </Typography>
+
+          <Box sx={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center" }}>
+            {fileViewerModal.url.toLowerCase().endsWith(".pdf") ? (
+              <iframe
+                src={`${baseUrl}${fileViewerModal.url}`}
+                title={fileViewerModal.type}
+                width="100%"
+                height="100%"
+                style={{ border: "none" }}
+              />
+            ) : (
+              <img
+                src={`${baseUrl}${fileViewerModal.url}`}
+                alt={fileViewerModal.type}
+                style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }}
+              />
+            )}
+          </Box>
+
+          <Box sx={{ mt: 2, display: "flex", justifyContent: "flex-end" }}>
+            <Button
+              variant="contained"
+              onClick={() => window.open(`${baseUrl}${fileViewerModal.url}`, "_blank")}
+              sx={{ mr: 2 }}
+            >
+              Open in New Tab
+            </Button>
+            <Button variant="outlined" onClick={handleCloseFileViewer}>
+              Close
+            </Button>
+          </Box>
         </Box>
       </Modal>
 

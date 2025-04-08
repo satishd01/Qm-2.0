@@ -17,6 +17,11 @@ import Orders from "layouts/tables/Order";
 import SendNotification from "layouts/tables/notification";
 import Incentives from "layouts/tables/incentive";
 import Policies from "layouts/tables/policy";
+import Authors from "layouts/tables/author";
+import ProductCategories from "layouts/tables/Productcategory";
+import Commissions from "layouts/tables/commition";
+import Packages from "layouts/tables/package";
+import Reports from "layouts/tables/invoiceandreports";
 
 const routes = [
   {
@@ -26,6 +31,14 @@ const routes = [
     icon: <Icon fontSize="small">dashboard</Icon>, // keep the default dashboard icon
     route: "/dashboard",
     component: <Dashboard />,
+  },
+  {
+    type: "collapse",
+    name: "Author",
+    key: "author",
+    icon: <Icon fontSize="small">people</Icon>, // people icon for users
+    route: "/author",
+    component: <Authors />,
   },
   {
     type: "collapse",
@@ -53,6 +66,14 @@ const routes = [
   },
   {
     type: "collapse",
+    name: "ProductCategory",
+    key: "ProductCategory",
+    icon: <Icon fontSize="small">category</Icon>, // shopping_bag icon for products
+    route: "/productcatogory",
+    component: <ProductCategories />,
+  },
+  {
+    type: "collapse",
     name: "Product",
     key: "Product",
     icon: <Icon fontSize="small">shopping_bag</Icon>, // shopping_bag icon for products
@@ -61,11 +82,35 @@ const routes = [
   },
   {
     type: "collapse",
+    name: "Commissions",
+    key: "Commissions",
+    icon: <Icon fontSize="small">attach_money</Icon>, // local_shipping icon for delivery partners
+    route: "/comition",
+    component: <Commissions />,
+  },
+  {
+    type: "collapse",
+    name: "Package",
+    key: "Package",
+    icon: <Icon fontSize="small">inventory</Icon>, // local_shipping icon for delivery partners
+    route: "/package",
+    component: <Packages />,
+  },
+  {
+    type: "collapse",
     name: "Order",
     key: "order",
     icon: <Icon fontSize="small">assignment</Icon>, // assignment icon for orders
     route: "/order",
     component: <Orders />,
+  },
+  {
+    type: "collapse",
+    name: "Report",
+    key: "Report",
+    icon: <Icon fontSize="small">assignment</Icon>, // assignment icon for orders
+    route: "/report",
+    component: <Reports />,
   },
   {
     type: "collapse",

@@ -1,37 +1,78 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "@mui/material/styles";
 import PropTypes from "prop-types";
-import Grid from "@mui/material/Grid";
-import Card from "@mui/material/Card";
-import Button from "@mui/material/Button";
-import TextField from "@mui/material/TextField";
-import Dialog from "@mui/material/Dialog";
-import DialogActions from "@mui/material/DialogActions";
-import DialogContent from "@mui/material/DialogContent";
-import DialogTitle from "@mui/material/DialogTitle";
-import Switch from "@mui/material/Switch";
-import FormControlLabel from "@mui/material/FormControlLabel";
+import {
+  Grid,
+  Card,
+  Button,
+  TextField,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Switch,
+  FormControlLabel,
+  Pagination,
+  CircularProgress,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Box,
+  Chip,
+  Snackbar,
+  Alert,
+} from "@mui/material";
+import { CloudUpload as CloudUploadIcon } from "@mui/icons-material";
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import Footer from "examples/Footer";
 import DataTable from "examples/Tables/DataTable";
-import Pagination from "@mui/material/Pagination";
-import CloudUploadIcon from "@mui/icons-material/CloudUpload";
-import CircularProgress from "@mui/material/CircularProgress";
+
+const CategoryCell = ({ value }) => <Chip label={value} color="primary" size="small" />;
+CategoryCell.propTypes = {
+  value: PropTypes.string.isRequired,
+};
+
+const PrescriptionCell = ({ value }) => (
+  <Chip
+    label={value ? "Required" : "Not Required"}
+    color={value ? "error" : "success"}
+    size="small"
+  />
+);
+PrescriptionCell.propTypes = {
+  value: PropTypes.bool.isRequired,
+};
 
 function Products() {
   const navigate = useNavigate();
   const theme = useTheme();
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [open, setOpen] = useState(false);
+  const [state, setState] = useState({
+    products: [],
+    loading: true,
+    searchTerm: "",
+    currentPage: 1,
+    totalPages: 1,
+    categories: [],
+    selectedCategory: "all",
+    snackbar: {
+      open: false,
+      message: "",
+      severity: "success",
+    },
+  });
+
+  const [dialogState, setDialogState] = useState({
+    open: false,
+    currentProduct: null,
+  });
+
+  const [authors, setAuthors] = useState([]);
   const [uploading, setUploading] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
 
   const [newProduct, setNewProduct] = useState({
     productName: "",
@@ -58,83 +99,129 @@ function Products() {
     isPrescriptionRequired: false,
     expertAdvice: "",
     substituteProducts: [],
+    authorId: "",
+    sub_category: "",
+    direction_to_use: "",
+    side_effects: "",
+    precautions_while_using: "",
+    descriptions: "",
+    references: "",
+    country_of_origin: "",
   });
 
   const baseUrl = process.env.REACT_APP_BASE_URL || "https://quickmeds.sndktech.online";
   const xAuthHeader =
     process.env.REACT_APP_X_AUTHORIZATION || "RGVlcGFrS3-VzaHdhaGE5Mzk5MzY5ODU0-QWxoblBvb2ph";
 
-  const handleOpen = () => setOpen(true);
-  const handleClose = () => {
-    setOpen(false);
-    setNewProduct({
-      productName: "",
-      mrp: 0,
-      sellingPrice: 0,
-      brand: "",
-      vendorId: 1,
-      productForm: "",
-      uses: "",
-      age: "",
-      categoryId: 1,
-      category: "",
-      manufacturer: "",
-      consumeType: "",
-      expireDate: "",
-      packagingDetails: "",
-      images: [],
-      variants: [],
-      composition: "",
-      productIntroduction: "",
-      usesOfMedication: "",
-      benefits: "",
-      contradictions: "",
-      isPrescriptionRequired: false,
-      expertAdvice: "",
-      substituteProducts: [],
-    });
-  };
+  const fetchCategories = useCallback(async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${baseUrl}/productCategory.get`, {
+        headers: {
+          "x-authorization": xAuthHeader,
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await response.json();
+      if (data?.categories) {
+        setState((prev) => ({ ...prev, categories: data.categories }));
+      }
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+      setState((prev) => ({
+        ...prev,
+        snackbar: {
+          open: true,
+          message: "Failed to load categories",
+          severity: "error",
+        },
+      }));
+    }
+  }, [baseUrl, xAuthHeader]);
+
+  const fetchAuthors = useCallback(async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${baseUrl}/authors`, {
+        headers: {
+          "x-authorization": xAuthHeader,
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await response.json();
+      if (data?.data) {
+        setAuthors(data.data);
+      }
+    } catch (error) {
+      console.error("Error fetching authors:", error);
+      setState((prev) => ({
+        ...prev,
+        snackbar: {
+          open: true,
+          message: "Failed to load authors",
+          severity: "error",
+        },
+      }));
+    }
+  }, [baseUrl, xAuthHeader]);
+
+  const fetchProducts = useCallback(async () => {
+    try {
+      setState((prev) => ({ ...prev, loading: true }));
+      const token = localStorage.getItem("token");
+
+      let url = `${baseUrl}/product.get?page=${state.currentPage}`;
+      if (state.selectedCategory !== "all") {
+        url = `${baseUrl}/product.categoryGet?categoryId=${state.selectedCategory}&page=${state.currentPage}`;
+      }
+
+      const response = await fetch(url, {
+        headers: {
+          "x-authorization": xAuthHeader,
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+      if (data?.products) {
+        setState((prev) => ({
+          ...prev,
+          products: data.products,
+          totalPages: data.totalPages || 1,
+          loading: false,
+        }));
+      }
+    } catch (error) {
+      console.error("Error fetching products:", error);
+      setState((prev) => ({
+        ...prev,
+        loading: false,
+        snackbar: {
+          open: true,
+          message: "Failed to load products",
+          severity: "error",
+        },
+      }));
+    }
+  }, [state.currentPage, state.selectedCategory, baseUrl, xAuthHeader]);
 
   useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        const response = await fetch(`${baseUrl}/product.get?page=${currentPage}`, {
-          headers: {
-            "x-authorization": xAuthHeader,
-            Authorization: `Bearer ${token}`,
-          },
-        });
+    fetchCategories();
+    fetchAuthors();
+  }, [fetchCategories, fetchAuthors]);
 
-        const data = await response.json();
-        if (data?.products) {
-          setProducts(data.products);
-          setTotalPages(data.totalPages || 1);
-        }
-      } catch (error) {
-        console.error("Error fetching products:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
+  useEffect(() => {
     fetchProducts();
-  }, [currentPage, navigate]);
+  }, [fetchProducts]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setNewProduct((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setNewProduct((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleBooleanChange = (e) => {
     const { name, checked } = e.target;
-    setNewProduct((prev) => ({
-      ...prev,
-      [name]: checked,
-    }));
+    setNewProduct((prev) => ({ ...prev, [name]: checked }));
   };
 
   const handleArrayChange = (e, field) => {
@@ -177,11 +264,25 @@ function Products() {
           images: [...prev.images, ...uploadedUrls],
         }));
       } else {
-        alert(data?.message || "Upload failed");
+        setState((prev) => ({
+          ...prev,
+          snackbar: {
+            open: true,
+            message: data?.message || "Upload failed",
+            severity: "error",
+          },
+        }));
       }
     } catch (error) {
       console.error("Upload error:", error);
-      alert("Upload failed. Please try again.");
+      setState((prev) => ({
+        ...prev,
+        snackbar: {
+          open: true,
+          message: "Upload failed. Please try again.",
+          severity: "error",
+        },
+      }));
     } finally {
       setUploading(false);
     }
@@ -197,17 +298,58 @@ function Products() {
   const handleCreateProduct = async () => {
     try {
       const token = localStorage.getItem("token");
-      setLoading(true); // Set loading state
+      setState((prev) => ({ ...prev, loading: true }));
 
-      // Validate required fields
-      if (!newProduct.productName || !newProduct.mrp || !newProduct.sellingPrice) {
-        // setSnackbar({
-        //   open: true,
-        //   message: "Product Name, MRP and Selling Price are required fields",
-        //   severity: "warning",
-        // });
+      if (
+        !newProduct.productName ||
+        !newProduct.mrp ||
+        !newProduct.sellingPrice ||
+        !newProduct.authorId
+      ) {
+        setState((prev) => ({
+          ...prev,
+          snackbar: {
+            open: true,
+            message: "Product Name, MRP, Selling Price and Author are required",
+            severity: "warning",
+          },
+        }));
         return;
       }
+
+      const productData = {
+        productName: newProduct.productName,
+        mrp: parseFloat(newProduct.mrp),
+        sellingPrice: parseFloat(newProduct.sellingPrice),
+        brand: newProduct.brand,
+        vendorId: parseInt(newProduct.vendorId),
+        productForm: newProduct.productForm,
+        uses: newProduct.uses,
+        age: newProduct.age,
+        categoryId: parseInt(newProduct.categoryId),
+        manufacturer: newProduct.manufacturer,
+        consumeType: newProduct.consumeType,
+        expireDate: newProduct.expireDate,
+        packagingDetails: newProduct.packagingDetails,
+        images: newProduct.images,
+        variants: newProduct.variants,
+        composition: newProduct.composition,
+        productIntroduction: newProduct.productIntroduction,
+        usesOfMedication: newProduct.usesOfMedication,
+        benefits: newProduct.benefits,
+        contradictions: newProduct.contradictions,
+        isPrescriptionRequired: newProduct.isPrescriptionRequired,
+        expertAdvice: newProduct.expertAdvice,
+        substituteProducts: newProduct.substituteProducts,
+        authorId: parseInt(newProduct.authorId),
+        sub_category: newProduct.sub_category,
+        direction_to_use: newProduct.direction_to_use,
+        side_effects: newProduct.side_effects,
+        precautions_while_using: newProduct.precautions_while_using,
+        descriptions: newProduct.descriptions,
+        references: newProduct.references,
+        country_of_origin: newProduct.country_of_origin,
+      };
 
       const response = await fetch(`${baseUrl}/product.add`, {
         method: "POST",
@@ -216,21 +358,22 @@ function Products() {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(newProduct),
+        body: JSON.stringify(productData),
       });
 
       const data = await response.json();
       if (!response.ok) throw new Error(data?.message || "Failed to create product");
 
-      // On success
-      // setSnackbar({
-      //   open: true,
-      //   message: "Product created successfully!",
-      //   severity: "success",
-      // });
-      window.alert("Product created successfully!");
+      setState((prev) => ({
+        ...prev,
+        snackbar: {
+          open: true,
+          message: "Product created successfully!",
+          severity: "success",
+        },
+        currentPage: 1,
+      }));
 
-      // Reset form and close dialog
       setNewProduct({
         productName: "",
         mrp: 0,
@@ -256,34 +399,41 @@ function Products() {
         isPrescriptionRequired: false,
         expertAdvice: "",
         substituteProducts: [],
+        authorId: "",
+        sub_category: "",
+        direction_to_use: "",
+        side_effects: "",
+        precautions_while_using: "",
+        descriptions: "",
+        references: "",
+        country_of_origin: "",
       });
 
-      setOpen(false);
-      setCurrentPage(1); // Reset to first page
-
-      // Refresh the product list
-      const refreshResponse = await fetch(`${baseUrl}/product.get?page=1`, {
-        headers: {
-          "x-authorization": xAuthHeader,
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      const refreshData = await refreshResponse.json();
-      if (refreshData?.products) {
-        setProducts(refreshData.products);
-        setTotalPages(refreshData.totalPages || 1);
-      }
+      setDialogState((prev) => ({ ...prev, open: false }));
+      await fetchProducts();
     } catch (error) {
       console.error("Error creating product:", error);
-      window.alert(error.message);
-      // setSnackbar({
-      //   open: true,
-      //   message: error.message,
-      //   severity: "error",
-      // });
+      setState((prev) => ({
+        ...prev,
+        snackbar: {
+          open: true,
+          message: error.message,
+          severity: "error",
+        },
+      }));
     } finally {
-      setLoading(false); // Clear loading state
+      setState((prev) => ({ ...prev, loading: false }));
     }
+  };
+
+  const handleCloseSnackbar = () => {
+    setState((prev) => ({
+      ...prev,
+      snackbar: {
+        ...prev.snackbar,
+        open: false,
+      },
+    }));
   };
 
   const columns = [
@@ -291,12 +441,21 @@ function Products() {
     { Header: "MRP", accessor: "mrp" },
     { Header: "Selling Price", accessor: "sellingPrice" },
     { Header: "Brand", accessor: "brand" },
-    { Header: "Category", accessor: "category" },
+    {
+      Header: "Category",
+      accessor: "category",
+      Cell: CategoryCell,
+    },
     { Header: "Expire Date", accessor: "expireDate" },
+    {
+      Header: "Prescription",
+      accessor: "isPrescriptionRequired",
+      Cell: PrescriptionCell,
+    },
   ];
 
-  const filteredProducts = products.filter((product) => {
-    const search = searchTerm.toLowerCase();
+  const filteredProducts = state.products.filter((product) => {
+    const search = state.searchTerm.toLowerCase();
     return (
       (product.productName || "").toLowerCase().includes(search) ||
       (product.brand || "").toLowerCase().includes(search) ||
@@ -304,7 +463,7 @@ function Products() {
     );
   });
 
-  if (loading) {
+  if (state.loading && state.products.length === 0) {
     return (
       <DashboardLayout>
         <DashboardNavbar />
@@ -342,48 +501,93 @@ function Products() {
                   <MDTypography variant="h6" color="black">
                     Products
                   </MDTypography>
-                  <MDBox display="flex" gap={2} flexWrap="wrap">
+                  <MDBox display="flex" gap={2} flexWrap="wrap" alignItems="center">
+                    <FormControl sx={{ minWidth: 200 }} size="small">
+                      <InputLabel>Category</InputLabel>
+                      <Select
+                        value={state.selectedCategory}
+                        label="Category"
+                        onChange={(e) => {
+                          setState((prev) => ({
+                            ...prev,
+                            selectedCategory: e.target.value,
+                            currentPage: 1,
+                          }));
+                        }}
+                      >
+                        <MenuItem value="all">All Categories</MenuItem>
+                        {state.categories.map((category) => (
+                          <MenuItem key={category.id} value={category.id}>
+                            {category.name}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
                     <TextField
                       label="Search Products"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
+                      value={state.searchTerm}
+                      onChange={(e) =>
+                        setState((prev) => ({
+                          ...prev,
+                          searchTerm: e.target.value,
+                        }))
+                      }
                       sx={{ width: 300 }}
+                      size="small"
                     />
-                    <Button variant="contained" color="error" onClick={handleOpen}>
+                    <Button
+                      variant="contained"
+                      color="error"
+                      onClick={() => setDialogState((prev) => ({ ...prev, open: true }))}
+                    >
                       Add New Product
                     </Button>
                   </MDBox>
                 </MDBox>
               </MDBox>
               <MDBox pt={3}>
-                <DataTable
-                  table={{ columns, rows: filteredProducts }}
-                  isSorted={false}
-                  entriesPerPage={false}
-                  showTotalEntries={false}
-                  noEndBorder
-                />
+                {filteredProducts.length > 0 ? (
+                  <DataTable
+                    table={{ columns, rows: filteredProducts }}
+                    isSorted={false}
+                    entriesPerPage={false}
+                    showTotalEntries={false}
+                    noEndBorder
+                  />
+                ) : (
+                  <MDBox p={3} textAlign="center">
+                    <MDTypography variant="body1">
+                      {state.searchTerm ? "No matching products found" : "No products available"}
+                    </MDTypography>
+                  </MDBox>
+                )}
               </MDBox>
-              <MDBox p={2} display="flex" justifyContent="center">
-                <Pagination
-                  count={totalPages}
-                  page={currentPage}
-                  onChange={(e, page) => setCurrentPage(page)}
-                  color="primary"
-                />
-              </MDBox>
+              {state.totalPages > 1 && (
+                <MDBox p={2} display="flex" justifyContent="center">
+                  <Pagination
+                    count={state.totalPages}
+                    page={state.currentPage}
+                    onChange={(_, page) => setState((prev) => ({ ...prev, currentPage: page }))}
+                    color="primary"
+                  />
+                </MDBox>
+              )}
             </Card>
           </Grid>
         </Grid>
       </MDBox>
       <Footer />
 
-      {/* Create Product Dialog */}
-      <Dialog open={open} onClose={handleClose} fullWidth maxWidth="md" scroll="paper">
+      <Dialog
+        open={dialogState.open}
+        onClose={() => setDialogState((prev) => ({ ...prev, open: false }))}
+        fullWidth
+        maxWidth="md"
+        scroll="paper"
+      >
         <DialogTitle>Add New Product</DialogTitle>
         <DialogContent dividers>
           <Grid container spacing={2}>
-            {/* Basic Information */}
             <Grid item xs={12} md={6}>
               <TextField
                 label="Product Name *"
@@ -401,14 +605,45 @@ function Products() {
                 fullWidth
                 margin="normal"
               />
+              <FormControl fullWidth margin="normal">
+                <InputLabel>Category *</InputLabel>
+                <Select
+                  name="categoryId"
+                  value={newProduct.categoryId}
+                  onChange={handleInputChange}
+                  label="Category *"
+                >
+                  {state.categories.map((category) => (
+                    <MenuItem key={category.id} value={category.id}>
+                      {category.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
               <TextField
-                label="Category *"
-                name="category"
-                value={newProduct.category}
+                label="Sub Category"
+                name="sub_category"
+                value={newProduct.sub_category}
                 onChange={handleInputChange}
                 fullWidth
                 margin="normal"
               />
+              <FormControl fullWidth margin="normal">
+                <InputLabel>Author *</InputLabel>
+                <Select
+                  name="authorId"
+                  value={newProduct.authorId}
+                  onChange={handleInputChange}
+                  label="Author *"
+                >
+                  {authors.map((author) => (
+                    <MenuItem key={author.id} value={author.id}>
+                      {author.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+
               <TextField
                 label="Manufacturer"
                 name="manufacturer"
@@ -433,9 +668,16 @@ function Products() {
                 fullWidth
                 margin="normal"
               />
+              {/* <TextField
+                label="Sub Category"
+                name="sub_category"
+                value={newProduct.sub_category}
+                onChange={handleInputChange}
+                fullWidth
+                margin="normal"
+              /> */}
             </Grid>
 
-            {/* Pricing and Dates */}
             <Grid item xs={12} md={6}>
               <TextField
                 label="MRP *"
@@ -481,6 +723,14 @@ function Products() {
                 fullWidth
                 margin="normal"
               />
+              <TextField
+                label="Country of Origin"
+                name="country_of_origin"
+                value={newProduct.country_of_origin}
+                onChange={handleInputChange}
+                fullWidth
+                margin="normal"
+              />
               <FormControlLabel
                 control={
                   <Switch
@@ -493,54 +743,40 @@ function Products() {
               />
             </Grid>
 
-            {/* Images Upload */}
             <Grid item xs={12}>
-              <input
-                type="file"
-                id="productImages"
-                onChange={handleImageUpload}
-                style={{ display: "none" }}
-                accept="image/*"
-                multiple
-              />
-              <label htmlFor="productImages">
-                <Button
-                  component="span"
-                  variant="outlined"
-                  startIcon={<CloudUploadIcon />}
-                  disabled={uploading}
-                  sx={{
-                    mt: 1,
-                    mb: 1,
-                    color: theme.palette.primary.main,
-                    borderColor: theme.palette.primary.main,
-                    "&:hover": {
-                      backgroundColor: theme.palette.primary.light,
-                      borderColor: theme.palette.primary.dark,
-                    },
-                    "& .MuiSvgIcon-root": {
-                      color: theme.palette.primary.main,
-                    },
-                  }}
-                >
-                  {uploading ? "Uploading..." : "Upload Product Images"}
-                </Button>
-              </label>
-              <MDBox mt={2}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                <input
+                  type="file"
+                  id="productImages"
+                  onChange={handleImageUpload}
+                  style={{ display: "none" }}
+                  accept="image/*"
+                  multiple
+                />
+                <label htmlFor="productImages">
+                  <Button
+                    component="span"
+                    variant="outlined"
+                    startIcon={<CloudUploadIcon />}
+                    disabled={uploading}
+                  >
+                    {uploading ? "Uploading..." : "Upload Product Images"}
+                  </Button>
+                </label>
+                {uploading && <CircularProgress size={24} />}
+              </Box>
+              <Box sx={{ mt: 2, display: "flex", flexWrap: "wrap", gap: 1 }}>
                 {newProduct.images.map((image, index) => (
-                  <MDBox key={index} display="flex" alignItems="center" mb={1}>
-                    <MDTypography variant="caption" noWrap sx={{ flexGrow: 1 }}>
-                      {image.split("/").pop()}
-                    </MDTypography>
-                    <Button size="small" color="error" onClick={() => handleRemoveImage(index)}>
-                      Remove
-                    </Button>
-                  </MDBox>
+                  <Chip
+                    key={index}
+                    label={image.split("/").pop()}
+                    onDelete={() => handleRemoveImage(index)}
+                    sx={{ maxWidth: 200 }}
+                  />
                 ))}
-              </MDBox>
+              </Box>
             </Grid>
 
-            {/* Variants and Composition */}
             <Grid item xs={12} md={6}>
               <TextField
                 label="Variants (comma separated)"
@@ -566,9 +802,18 @@ function Products() {
                 multiline
                 rows={2}
               />
+              <TextField
+                label="Direction to Use"
+                name="direction_to_use"
+                value={newProduct.direction_to_use}
+                onChange={handleInputChange}
+                fullWidth
+                margin="normal"
+                multiline
+                rows={2}
+              />
             </Grid>
 
-            {/* Uses and Benefits */}
             <Grid item xs={12} md={6}>
               <TextField
                 label="Uses"
@@ -590,9 +835,28 @@ function Products() {
                 multiline
                 rows={2}
               />
+              <TextField
+                label="Side Effects"
+                name="side_effects"
+                value={newProduct.side_effects}
+                onChange={handleInputChange}
+                fullWidth
+                margin="normal"
+                multiline
+                rows={2}
+              />
+              <TextField
+                label="Precautions While Using"
+                name="precautions_while_using"
+                value={newProduct.precautions_while_using}
+                onChange={handleInputChange}
+                fullWidth
+                margin="normal"
+                multiline
+                rows={2}
+              />
             </Grid>
 
-            {/* Detailed Information */}
             <Grid item xs={12}>
               <TextField
                 label="Product Introduction"
@@ -634,21 +898,65 @@ function Products() {
                 multiline
                 rows={2}
               />
+              <TextField
+                label="Descriptions"
+                name="descriptions"
+                value={newProduct.descriptions}
+                onChange={handleInputChange}
+                fullWidth
+                margin="normal"
+                multiline
+                rows={3}
+              />
+              <TextField
+                label="References"
+                name="references"
+                value={newProduct.references}
+                onChange={handleInputChange}
+                fullWidth
+                margin="normal"
+                multiline
+                rows={2}
+              />
             </Grid>
           </Grid>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleClose}>Cancel</Button>
+          <Button onClick={() => setDialogState((prev) => ({ ...prev, open: false }))}>
+            Cancel
+          </Button>
           <Button
             onClick={handleCreateProduct}
-            color="primary"
+            color="error"
             variant="contained"
-            disabled={!newProduct.productName || !newProduct.mrp || !newProduct.sellingPrice}
+            disabled={
+              !newProduct.productName ||
+              !newProduct.mrp ||
+              !newProduct.sellingPrice ||
+              !newProduct.brand ||
+              !newProduct.categoryId ||
+              !newProduct.authorId
+            }
           >
             Create Product
           </Button>
         </DialogActions>
       </Dialog>
+
+      <Snackbar
+        open={state.snackbar.open}
+        autoHideDuration={6000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: "top", horizontal: "right" }}
+      >
+        <Alert
+          onClose={handleCloseSnackbar}
+          severity={state.snackbar.severity}
+          sx={{ width: "100%" }}
+        >
+          {state.snackbar.message}
+        </Alert>
+      </Snackbar>
     </DashboardLayout>
   );
 }
@@ -663,6 +971,7 @@ Products.propTypes = {
       brand: PropTypes.string.isRequired,
       category: PropTypes.string.isRequired,
       expireDate: PropTypes.string,
+      isPrescriptionRequired: PropTypes.bool,
     }).isRequired,
   }).isRequired,
 };
