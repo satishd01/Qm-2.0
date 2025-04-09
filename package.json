@@ -29,6 +29,7 @@
     "clsx": "^1.1.0",
     "crypto-browserify": "^3.12.1",
     "dotenv": "^16.4.7",
+    "file-saver": "^2.0.5",
     "formik": "^2.4.6",
     "html2canvas": "^1.4.1",
     "jspdf": "^2.5.2",
@@ -48,6 +49,7 @@
     "stylis": "4.1.4",
     "stylis-plugin-rtl": "^2.1.1",
     "twilio": "^5.4.5",
+    "xlsx": "^0.18.5",
     "yup": "^1.1.1"
   },
   "scripts": {

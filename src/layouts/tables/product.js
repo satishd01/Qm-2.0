@@ -1,7 +1,8 @@
-import { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "@mui/material/styles";
 import PropTypes from "prop-types";
+import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import {
   Grid,
   Card,
@@ -24,7 +25,9 @@ import {
   Snackbar,
   Alert,
 } from "@mui/material";
-import { CloudUpload as CloudUploadIcon } from "@mui/icons-material";
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
+
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
@@ -46,6 +49,61 @@ const PrescriptionCell = ({ value }) => (
 );
 PrescriptionCell.propTypes = {
   value: PropTypes.bool.isRequired,
+};
+
+const generateSampleData = () => {
+  return [
+    {
+      "Product Name": "Zinga vita Vitamin Amla Extract 1000mg Tablet",
+      MRP: 999.99,
+      "Selling Price": 399.99,
+      Brand: "Sun Pharma",
+      "Product Form": "Vitamin Tablet",
+      Uses: "Uses",
+      "Age Group": "Any",
+      "Category ID": 1,
+      Category: "Tablet",
+      Manufacturer: "Sun Pharma",
+      "Consume Type": "Tablet",
+      "Expire Date": "2025-12-06",
+      "Packaging Details": "10 capsules in a stripe",
+      Stock: "Available",
+      Images: "/uploads/1726567726092.png,/uploads/1726567726092.png,/uploads/1726567726092.png",
+      Variants: JSON.stringify([
+        { units: "30 tablets", mrp: 999.99, sellingPrice: 399.99, stock: "Available" },
+        { units: "60 tablets", mrp: 1999.99, sellingPrice: 1399.99, stock: "Out of Stock" },
+      ]),
+      Composition: "Bromelain (90mg) + Trypsin (48mg) + Rutoside (100mg)",
+      "Product Introduction": "Fast&Up Charge is a completely natural Vitamin C supplement...",
+      "Uses of Medication": "Fast&Up Charge is a completely natural Vitamin C supplement...",
+      Benefits: "In Pain relief, In Treatment of Fever",
+      Contradictions: "Fast&Up Charge is a completely natural Vitamin C supplement...",
+      "Prescription Required": "1",
+      "Expert Advice": JSON.stringify({
+        avatar: "/uploads/1716832690805.png",
+        doctorName: "Dr. Russ Mehta Chibber",
+        designation: "BDS",
+        advice: "Fast&Up Charge is a completely natural Vitamin C supplement...",
+      }),
+      "Substitute Products": JSON.stringify({
+        avatar: "/uploads/1716832690805.png",
+        doctorName: "Dr. Russ Mehta Chibber",
+        designation: "BDS",
+        advice: "Fast&Up Charge is a completely natural Vitamin C supplement...",
+      }),
+      "Author ID": 1,
+    },
+  ];
+};
+
+const exportSampleDataToExcel = () => {
+  const sampleData = generateSampleData();
+  const worksheet = XLSX.utils.json_to_sheet(sampleData);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Sample Data");
+  const excelBuffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
+  const blob = new Blob([excelBuffer], { type: "application/octet-stream" });
+  saveAs(blob, "sample_data.xlsx");
 };
 
 function Products() {
@@ -463,6 +521,237 @@ function Products() {
     );
   });
 
+  const exportToExcel = () => {
+    // Transform the products data for Excel export
+    const excelData = state.products.map((product) => {
+      return {
+        "Product Name": product.productName,
+        MRP: product.mrp,
+        "Selling Price": product.sellingPrice,
+        Brand: product.brand,
+        "Product Form": product.productForm,
+        Uses: product.uses,
+        "Age Group": product.age,
+        "Category ID": product.categoryId,
+        Category: product.category,
+        Manufacturer: product.manufacturer,
+        "Consume Type": product.consumeType,
+        "Expire Date": product.expireDate,
+        "Packaging Details": product.packagingDetails,
+        Stock: product.stock,
+        Images: product.images ? product.images.join(", ") : "",
+        Variants: product.variants ? JSON.stringify(product.variants) : "",
+        Composition: product.composition,
+        "Product Introduction": product.productIntroduction,
+        "Uses of Medication": product.usesOfMedication,
+        Benefits: product.benefits,
+        Contradictions: product.contradictions,
+        "Prescription Required": product.isPrescriptionRequired ? "1" : "0",
+        "Expert Advice": product.expertAdvice ? JSON.stringify(product.expertAdvice) : "",
+        "Substitute Products": product.substituteProducts
+          ? JSON.stringify(product.substituteProducts)
+          : "",
+        "Author ID": product.authorId,
+        "Sub Category": product.sub_category,
+        "Direction to Use": product.direction_to_use,
+        "Side Effects": product.side_effects,
+        "Precautions While Using": product.precautions_while_using,
+        Descriptions: product.descriptions,
+        References: product.references,
+        "Country of Origin": product.country_of_origin,
+        Discount: product.discount || "0%",
+      };
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(excelData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Products");
+
+    // Auto-size columns
+    const wscols = [
+      { wch: 30 }, // Product Name
+      { wch: 10 }, // MRP
+      { wch: 15 }, // Selling Price
+      { wch: 20 }, // Brand
+      { wch: 20 }, // Product Form
+      { wch: 15 }, // Uses
+      { wch: 15 }, // Age Group
+      { wch: 10 }, // Category ID
+      { wch: 15 }, // Category
+      { wch: 20 }, // Manufacturer
+      { wch: 15 }, // Consume Type
+      { wch: 15 }, // Expire Date
+      { wch: 25 }, // Packaging Details
+      { wch: 15 }, // Stock
+      { wch: 40 }, // Images
+      { wch: 60 }, // Variants
+      { wch: 40 }, // Composition
+      { wch: 40 }, // Product Introduction
+      { wch: 40 }, // Uses of Medication
+      { wch: 40 }, // Benefits
+      { wch: 40 }, // Contradictions
+      { wch: 20 }, // Prescription Required
+      { wch: 60 }, // Expert Advice
+      { wch: 60 }, // Substitute Products
+      { wch: 10 }, // Author ID
+      { wch: 20 }, // Sub Category
+      { wch: 30 }, // Direction to Use
+      { wch: 30 }, // Side Effects
+      { wch: 30 }, // Precautions While Using
+      { wch: 40 }, // Descriptions
+      { wch: 30 }, // References
+      { wch: 20 }, // Country of Origin
+      { wch: 10 }, // Discount
+    ];
+    worksheet["!cols"] = wscols;
+
+    const excelBuffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
+    const blob = new Blob([excelBuffer], { type: "application/octet-stream" });
+    saveAs(blob, "products_export.xlsx");
+  };
+
+  const handleExcelUpload = (event) => {
+    const file = event.target.files[0];
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const data = e.target.result;
+      const workbook = XLSX.read(data, { type: "binary" });
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+      // Transform the data to match the API format
+      const products = jsonData.map((row) => {
+        // Parse variants if they exist in the row
+        let variants = [];
+        try {
+          if (row["Variants"]) {
+            variants =
+              typeof row["Variants"] === "string" ? JSON.parse(row["Variants"]) : row["Variants"];
+          }
+        } catch (e) {
+          console.error("Error parsing variants:", e);
+        }
+
+        // Parse expertAdvice if it exists in the row
+        let expertAdvice = {};
+        try {
+          if (row["Expert Advice"]) {
+            expertAdvice =
+              typeof row["Expert Advice"] === "string"
+                ? JSON.parse(row["Expert Advice"])
+                : row["Expert Advice"];
+          }
+        } catch (e) {
+          console.error("Error parsing expert advice:", e);
+        }
+
+        // Parse substituteProducts if it exists in the row
+        let substituteProducts = {};
+        try {
+          if (row["Substitute Products"]) {
+            substituteProducts =
+              typeof row["Substitute Products"] === "string"
+                ? JSON.parse(row["Substitute Products"])
+                : row["Substitute Products"];
+          }
+        } catch (e) {
+          console.error("Error parsing substitute products:", e);
+        }
+
+        // Parse images if they exist in the row
+        let images = [];
+        if (row["Images"]) {
+          images =
+            typeof row["Images"] === "string"
+              ? row["Images"].split(",").map((img) => img.trim())
+              : Array.isArray(row["Images"])
+                ? row["Images"]
+                : [];
+        }
+
+        return {
+          addedByType: "Admin",
+          productName: row["Product Name"] || "",
+          mrp: parseFloat(row["MRP"] || 0),
+          sellingPrice: parseFloat(row["Selling Price"] || 0),
+          brand: row["Brand"] || "",
+          productForm: row["Product Form"] || "",
+          uses: row["Uses"] || "",
+          age: row["Age Group"] || "Any",
+          categoryId: parseInt(row["Category ID"] || 1),
+          category: row["Category"] || "",
+          manufacturer: row["Manufacturer"] || "",
+          consumeType: row["Consume Type"] || "",
+          expireDate: row["Expire Date"] || "",
+          packagingDetails: row["Packaging Details"] || "",
+          stock: row["Stock"] || "Available",
+          images: images,
+          variants: variants,
+          composition: row["Composition"] || "",
+          productIntroduction: row["Product Introduction"] || "",
+          usesOfMedication: row["Uses of Medication"] || "",
+          benefits: row["Benefits"] || "",
+          contradictions: row["Contradictions"] || "",
+          isPrescriptionRequired: row["Prescription Required"] === "1" ? "1" : "0",
+          expertAdvice: expertAdvice,
+          substituteProducts: substituteProducts,
+          authorId: parseInt(row["Author ID"] || 1),
+          sub_category: row["Sub Category"] || "",
+          direction_to_use: row["Direction to Use"] || "",
+          side_effects: row["Side Effects"] || "",
+          precautions_while_using: row["Precautions While Using"] || "",
+          descriptions: row["Descriptions"] || "",
+          references: row["References"] || "",
+          country_of_origin: row["Country of Origin"] || "",
+        };
+      });
+
+      // Call the API to add multiple products
+      const token = localStorage.getItem("token");
+      fetch(`${baseUrl}/product.addmultiple`, {
+        method: "POST",
+        headers: {
+          "x-authorization": xAuthHeader,
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(products),
+      })
+        .then((response) => {
+          if (!response.ok) {
+            return response.json().then((err) => {
+              throw new Error(err.message || "Failed to import products");
+            });
+          }
+          return response.json();
+        })
+        .then((data) => {
+          setState((prev) => ({
+            ...prev,
+            snackbar: {
+              open: true,
+              message: "Products imported successfully!",
+              severity: "success",
+            },
+          }));
+          fetchProducts();
+        })
+        .catch((error) => {
+          console.error("Error importing products:", error);
+          setState((prev) => ({
+            ...prev,
+            snackbar: {
+              open: true,
+              message: error.message,
+              severity: "error",
+            },
+          }));
+        });
+    };
+    reader.readAsBinaryString(file);
+  };
+
   if (state.loading && state.products.length === 0) {
     return (
       <DashboardLayout>
@@ -541,6 +830,24 @@ function Products() {
                       onClick={() => setDialogState((prev) => ({ ...prev, open: true }))}
                     >
                       Add New Product
+                    </Button>
+                    <Button variant="contained" color="error" onClick={exportToExcel}>
+                      Export to Excel
+                    </Button>
+                    <input
+                      type="file"
+                      id="excelFile"
+                      onChange={handleExcelUpload}
+                      style={{ display: "none" }}
+                      accept=".xlsx"
+                    />
+                    <label htmlFor="excelFile">
+                      <Button component="span" variant="contained" color="error">
+                        Import from Excel
+                      </Button>
+                    </label>
+                    <Button variant="contained" color="error" onClick={exportSampleDataToExcel}>
+                      Download Sample Excel
                     </Button>
                   </MDBox>
                 </MDBox>
@@ -668,14 +975,6 @@ function Products() {
                 fullWidth
                 margin="normal"
               />
-              {/* <TextField
-                label="Sub Category"
-                name="sub_category"
-                value={newProduct.sub_category}
-                onChange={handleInputChange}
-                fullWidth
-                margin="normal"
-              /> */}
             </Grid>
 
             <Grid item xs={12} md={6}>
