@@ -125,7 +125,7 @@ const FileViewCell = ({ value, type }) => {
       startIcon={icon}
       onClick={() =>
         window.open(
-          `${process.env.REACT_APP_BASE_URL || "https://quickmeds.sndktech.online"}${value}`,
+          `${process.env.REACT_APP_BASE_URL || "https://quickmeds.sndktech.online"}/${value}`,
           "_blank"
         )
       }

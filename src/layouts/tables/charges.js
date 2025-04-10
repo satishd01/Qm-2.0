@@ -15,6 +15,10 @@ import {
   Pagination,
   CircularProgress,
   Snackbar,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from "@mui/material";
 import { Delete as DeleteIcon } from "@mui/icons-material";
 import MDBox from "components/MDBox";
@@ -30,6 +34,23 @@ const Alert = React.forwardRef(function Alert(props, ref) {
 });
 
 const DEFAULT_PAGE_SIZE = 10;
+
+// List of predefined charge types
+const CHARGE_TYPES = [
+  "Delivery Charges LOCAL",
+  "Delivery Charges ROI",
+  "Packaging Charges",
+  "Handling Fee",
+  "Platform Fee",
+  "Extra Weight",
+  "COD Charges",
+  "Fast Service",
+  "Emergency Delivery Surcharge",
+  "Delivery Partner Fee",
+  "Long Distance Fee",
+  "Connivence Charges",
+  "Other Charges",
+];
 
 function Charges() {
   const navigate = useNavigate();
@@ -344,17 +365,20 @@ function Charges() {
       >
         <DialogTitle>Create New Charge</DialogTitle>
         <DialogContent>
-          <TextField
-            autoFocus
-            margin="dense"
-            name="chargesType"
-            label="Charge Type"
-            fullWidth
-            variant="outlined"
-            value={newCharge.chargesType}
-            onChange={(e) => setNewCharge((prev) => ({ ...prev, chargesType: e.target.value }))}
-            sx={{ mt: 2 }}
-          />
+          <FormControl fullWidth sx={{ mt: 2 }}>
+            <InputLabel>Charge Type</InputLabel>
+            <Select
+              value={newCharge.chargesType}
+              label="Charge Type"
+              onChange={(e) => setNewCharge((prev) => ({ ...prev, chargesType: e.target.value }))}
+            >
+              {CHARGE_TYPES.map((type) => (
+                <MenuItem key={type} value={type}>
+                  {type}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
           <TextField
             margin="dense"
             name="amount"
