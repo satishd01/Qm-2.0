@@ -22,23 +22,17 @@ import ProductCategories from "layouts/tables/Productcategory";
 import Commissions from "layouts/tables/commition";
 import Packages from "layouts/tables/package";
 import Reports from "layouts/tables/invoiceandreports";
+import Inquiries from "layouts/tables/inquries";
+import InsurancePlansManagement from "layouts/tables/insurance";
 
 const routes = [
   {
     type: "collapse",
-    name: "Dashboard",
+    name: "Menu",
     key: "dashboard",
     icon: <Icon fontSize="small">dashboard</Icon>, // keep the default dashboard icon
     route: "/dashboard",
     component: <Dashboard />,
-  },
-  {
-    type: "collapse",
-    name: "Author",
-    key: "author",
-    icon: <Icon fontSize="small">people</Icon>, // people icon for users
-    route: "/author",
-    component: <Authors />,
   },
   {
     type: "collapse",
@@ -50,7 +44,7 @@ const routes = [
   },
   {
     type: "collapse",
-    name: "Vendor",
+    name: "Vendor Medicine/Lab",
     key: "vendor",
     icon: <Icon fontSize="small">storefront</Icon>, // storefront icon for vendors
     route: "/vendor",
@@ -58,31 +52,7 @@ const routes = [
   },
   {
     type: "collapse",
-    name: "Delivery Partner",
-    key: "dpartner",
-    icon: <Icon fontSize="small">local_shipping</Icon>, // local_shipping icon for delivery partners
-    route: "/delivery-partner",
-    component: <DeliveryPartners />,
-  },
-  {
-    type: "collapse",
-    name: "ProductCategory",
-    key: "ProductCategory",
-    icon: <Icon fontSize="small">category</Icon>, // shopping_bag icon for products
-    route: "/productcatogory",
-    component: <ProductCategories />,
-  },
-  {
-    type: "collapse",
-    name: "Product",
-    key: "Product",
-    icon: <Icon fontSize="small">shopping_bag</Icon>, // shopping_bag icon for products
-    route: "/product",
-    component: <Products />,
-  },
-  {
-    type: "collapse",
-    name: "Commissions",
+    name: "Vendor Commission",
     key: "Commissions",
     icon: <Icon fontSize="small">attach_money</Icon>, // local_shipping icon for delivery partners
     route: "/comition",
@@ -90,27 +60,27 @@ const routes = [
   },
   {
     type: "collapse",
-    name: "Package",
-    key: "Package",
-    icon: <Icon fontSize="small">inventory</Icon>, // local_shipping icon for delivery partners
-    route: "/package",
-    component: <Packages />,
+    name: "Delivery/phlebotomist",
+    key: "dpartner",
+    icon: <Icon fontSize="small">local_shipping</Icon>, // local_shipping icon for delivery partners
+    route: "/delivery-partner",
+    component: <DeliveryPartners />,
   },
   {
     type: "collapse",
-    name: "Order",
-    key: "order",
-    icon: <Icon fontSize="small">assignment</Icon>, // assignment icon for orders
-    route: "/order",
-    component: <Orders />,
+    name: "Product Data Entry",
+    key: "Product",
+    icon: <Icon fontSize="small">shopping_bag</Icon>, // shopping_bag icon for products
+    route: "/product",
+    component: <Products />,
   },
   {
     type: "collapse",
-    name: "Report",
-    key: "Report",
-    icon: <Icon fontSize="small">assignment</Icon>, // assignment icon for orders
-    route: "/report",
-    component: <Reports />,
+    name: "Product Category",
+    key: "ProductCategory",
+    icon: <Icon fontSize="small">category</Icon>, // shopping_bag icon for products
+    route: "/productcatogory",
+    component: <ProductCategories />,
   },
   {
     type: "collapse",
@@ -122,7 +92,23 @@ const routes = [
   },
   {
     type: "collapse",
-    name: "Charges",
+    name: "Package",
+    key: "Package",
+    icon: <Icon fontSize="small">inventory</Icon>, // local_shipping icon for delivery partners
+    route: "/package",
+    component: <Packages />,
+  },
+  {
+    type: "collapse",
+    name: "Health Insurance",
+    key: "health insurance",
+    icon: <Icon fontSize="small">account_balance_wallet</Icon>, // account_balance_wallet icon for charges
+    route: "/health-insurance",
+    component: <InsurancePlansManagement />,
+  },
+  {
+    type: "collapse",
+    name: "QMRX Charges",
     key: "charges",
     icon: <Icon fontSize="small">account_balance_wallet</Icon>, // account_balance_wallet icon for charges
     route: "/charges",
@@ -130,7 +116,7 @@ const routes = [
   },
   {
     type: "collapse",
-    name: "Coupon",
+    name: "Discount Coupon",
     key: "coupon",
     icon: <Icon fontSize="small">card_giftcard</Icon>, // card_giftcard icon for coupons
     route: "/coupon",
@@ -138,19 +124,43 @@ const routes = [
   },
   {
     type: "collapse",
-    name: "Banner",
-    key: "banner",
-    icon: <Icon fontSize="small">image</Icon>, // image icon for banners
-    route: "/banner",
-    component: <Banners />,
-  },
-  {
-    type: "collapse",
-    name: "Notification",
+    name: "Push Notification",
     key: "notification",
     icon: <Icon fontSize="small">notifications</Icon>, // notifications icon for notifications
     route: "/send-notification",
     component: <SendNotification />,
+  },
+  {
+    type: "collapse",
+    name: "inquiry",
+    key: "inquiry",
+    icon: <Icon fontSize="small">policy</Icon>, // policy icon for policies
+    route: "/inquiry",
+    component: <Inquiries />,
+  },
+  {
+    type: "collapse",
+    name: "Author Details",
+    key: "author",
+    icon: <Icon fontSize="small">people</Icon>, // people icon for users
+    route: "/author",
+    component: <Authors />,
+  },
+  {
+    type: "collapse",
+    name: "Uploaded Invoice",
+    key: "Report",
+    icon: <Icon fontSize="small">assignment</Icon>, // assignment icon for orders
+    route: "/report",
+    component: <Reports />,
+  },
+  {
+    type: "collapse",
+    name: "Order",
+    key: "order",
+    icon: <Icon fontSize="small">assignment</Icon>, // assignment icon for orders
+    route: "/order",
+    component: <Orders />,
   },
   {
     type: "collapse",
@@ -167,6 +177,14 @@ const routes = [
     icon: <Icon fontSize="small">policy</Icon>, // policy icon for policies
     route: "/policies",
     component: <Policies />,
+  },
+  {
+    type: "collapse",
+    name: "Banner",
+    key: "banner",
+    icon: <Icon fontSize="small">image</Icon>, // image icon for banners
+    route: "/banner",
+    component: <Banners />,
   },
   {
     route: "/authentication/sign-in",
