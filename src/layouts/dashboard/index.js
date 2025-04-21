@@ -1,112 +1,263 @@
-// @mui material components
-import Grid from "@mui/material/Grid";
-import MDBox from "components/MDBox";
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Card, Grid } from "@mui/material";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import Footer from "examples/Footer";
-import ComplexStatisticsCard from "examples/Cards/StatisticsCards/ComplexStatisticsCard";
+import MDBox from "components/MDBox";
+import MDTypography from "components/MDTypography";
 
-// Data
-import { useEffect, useState } from "react";
-
-function Dashboard() {
-  const [userCount, setUserCount] = useState(0);
-  const [orderCount, setOrderCount] = useState(0); // Added state for orders
-  const [milkPrices, setMilkPrices] = useState({ cowPrice: 0, buffaloPrice: 0 }); // Added state for milk prices
-  const [dashboardStats, setDashboardStats] = useState({
-    categories_all: 0,
-    categories_used: 0,
-    users: 0,
-    locations_all: 0,
-    locations_used: 0,
+function OrdersDashboard() {
+  const navigate = useNavigate();
+  const [vendorCounts, setVendorCounts] = useState({
+    newOrders: 0,
+    pendingOrders: 0,
+    completedOrders: 0,
+    partiallyDeliveredOrders: 0,
+    callToModifyOrders: 0,
+    returnOrderRequests: 0,
+    howToTakeMedicineOrders: 0,
+    eConsultationOrders: 0,
+    uploadedInvoices: 0,
   });
 
-  // Fetch Dashboard Stats
   useEffect(() => {
-    const fetchDashboardStats = async () => {
+    const fetchCounts = async () => {
       try {
-        const token = localStorage.getItem("ACCESS_TOKEN");
-
-        if (!token) {
-          console.error("No token found in localStorage.");
-          return;
-        }
-
-        const response = await fetch("https://kita.shellcode.shop/api/activities/dashboard/stats", {
-          method: "GET",
+        const response = await fetch("https://quickmeds.sndktech.online/adminOrdersCount", {
           headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
+            "x-authorization": "RGVlcGFrS3-VzaHdhaGE5Mzk5MzY5ODU0-QWxoblBvb2ph",
           },
         });
-
         const data = await response.json();
-
-        // Example Response:
-        // { "categories_all": 18, "categories_used": 23, "users": 21, "locations_all": 5, "locations_used": 6626 }
-
-        setDashboardStats({
-          categories_all: data.categories_all,
-          categories_used: data.categories_used,
-          users: data.users,
-          locations_all: data.locations_all,
-          locations_used: data.locations_used,
-        });
+        if (data.status) {
+          setVendorCounts({
+            newOrders: data.data.statusCounts.newOrders,
+            pendingOrders: data.data.statusCounts.pendingOrders,
+            completedOrders: data.data.statusCounts.acceptedOrders,
+            partiallyDeliveredOrders: data.data.statusCounts.partiallyDeliveredOrders,
+            callToModifyOrders: data.data.statusCounts.callToModifyOrders,
+            returnOrderRequests: data.data.statusCounts.returnOrderRequests,
+            howToTakeMedicineOrders: data.data.statusCounts.howToTakeMedicineOrders,
+            eConsultationOrders: data.data.statusCounts.eConsultationOrders,
+            uploadedInvoices: data.data.totalUploadedInvoices,
+          });
+        }
       } catch (error) {
-        console.error("Error fetching dashboard stats", error);
+        console.error("Error fetching order counts:", error);
       }
     };
 
-    fetchDashboardStats();
+    fetchCounts();
   }, []);
 
-  // Render the dashboard with updated stats
+  /*************  ✨ Windsurf Command ⭐  *************/
+  /**
+   * Navigate to a specific order status page
+   * @param {string} status The order status (e.g. "newOrders", "pendingOrders", etc.)
+   */
+  /*******  fd9666f4-0e96-440d-907a-30d56554e024  *******/
+
+  const handleNavigate = (status) => {
+    navigate(`/${status}`);
+  };
+
+  const totalMedicineOrders =
+    vendorCounts.newOrders +
+    vendorCounts.pendingOrders +
+    vendorCounts.completedOrders +
+    vendorCounts.partiallyDeliveredOrders;
+  const totalLabOrders =
+    vendorCounts.newOrders +
+    vendorCounts.pendingOrders +
+    vendorCounts.completedOrders +
+    vendorCounts.partiallyDeliveredOrders;
+
   return (
     <DashboardLayout>
       <DashboardNavbar />
-      <MDBox py={3}>
-        <Grid container spacing={3}></Grid>
-        {/* Displaying dashboard stats */}
-        <Grid container spacing={3} mt={3}>
-          <Grid item xs={12} md={6} lg={3}>
-            <MDBox mb={1.5}>
-              <ComplexStatisticsCard
-                color="info"
-                icon="category"
-                title="Categories All"
-                count={dashboardStats.categories_all}
-              />
-            </MDBox>
+      <MDBox pt={0} pb={3}>
+        <Grid container spacing={2} justifyContent="center">
+          <Grid item xs={12}>
+            <MDTypography variant="h3" textAlign="center" mb={4}>
+              DASHBOARD
+            </MDTypography>
           </Grid>
-          <Grid item xs={12} md={6} lg={3}>
-            <MDBox mb={1.5}>
-              <ComplexStatisticsCard
-                color="warning"
-                icon="category"
-                title="Categories Used"
-                count={dashboardStats.categories_used}
-              />
-            </MDBox>
+
+          {/* Medicine Orders Section */}
+          <Grid item xs={12}>
+            <MDTypography variant="h4" textAlign="left" mb={2} ml={2}>
+              Medicine Orders
+            </MDTypography>
           </Grid>
-          <Grid item xs={12} md={6} lg={3}>
-            <MDBox mb={1.5}>
-              <ComplexStatisticsCard
-                color="primary"
-                icon="group"
-                title="Users"
-                count={dashboardStats.users}
-              />
-            </MDBox>
+
+          <Grid item xs={12} md={3}>
+            <Card onClick={() => handleNavigate("order")} sx={{ cursor: "pointer" }}>
+              <MDBox p={2} display="flex" justifyContent="space-between" alignItems="center">
+                <MDTypography variant="h6">New Order</MDTypography>
+                <MDTypography variant="h4" color="primary">
+                  {vendorCounts.newOrders}
+                </MDTypography>
+              </MDBox>
+            </Card>
           </Grid>
-          <Grid item xs={12} md={6} lg={3}>
-            <MDBox mb={1.5}>
-              <ComplexStatisticsCard
-                color="success"
-                icon="location_on"
-                title="Locations All"
-                count={dashboardStats.locations_all}
-              />
-            </MDBox>
+          <Grid item xs={12} md={3}>
+            <Card onClick={() => handleNavigate("order")} sx={{ cursor: "pointer" }}>
+              <MDBox p={2} display="flex" justifyContent="space-between" alignItems="center">
+                <MDTypography variant="h6">Pending Order</MDTypography>
+                <MDTypography variant="h4" color="primary">
+                  {vendorCounts.pendingOrders}
+                </MDTypography>
+              </MDBox>
+            </Card>
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <Card onClick={() => handleNavigate("order")} sx={{ cursor: "pointer" }}>
+              <MDBox p={2} display="flex" justifyContent="space-between" alignItems="center">
+                <MDTypography variant="h6">Completed Order</MDTypography>
+                <MDTypography variant="h4" color="primary">
+                  {vendorCounts.completedOrders}
+                </MDTypography>
+              </MDBox>
+            </Card>
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <Card onClick={() => handleNavigate("order")} sx={{ cursor: "pointer" }}>
+              <MDBox p={2} display="flex" justifyContent="space-between" alignItems="center">
+                <MDTypography variant="h6">Partial Order</MDTypography>
+                <MDTypography variant="h4" color="primary">
+                  {vendorCounts.partiallyDeliveredOrders}
+                </MDTypography>
+              </MDBox>
+            </Card>
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <Card onClick={() => handleNavigate("order")} sx={{ cursor: "pointer" }}>
+              <MDBox p={2} display="flex" justifyContent="space-between" alignItems="center">
+                <MDTypography variant="h6">call to modify Order</MDTypography>
+                <MDTypography variant="h4" color="primary">
+                  {vendorCounts.newOrders}
+                </MDTypography>
+              </MDBox>
+            </Card>
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <Card onClick={() => handleNavigate("order")} sx={{ cursor: "pointer" }}>
+              <MDBox p={2} display="flex" justifyContent="space-between" alignItems="center">
+                <MDTypography variant="h6">return request</MDTypography>
+                <MDTypography variant="h4" color="primary">
+                  {vendorCounts.newOrders}
+                </MDTypography>
+              </MDBox>
+            </Card>
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <Card onClick={() => handleNavigate("report")} sx={{ cursor: "pointer" }}>
+              <MDBox p={2} display="flex" justifyContent="space-between" alignItems="center">
+                <MDTypography variant="h6"> How to take medicine</MDTypography>
+                <MDTypography variant="h4" color="primary">
+                  {vendorCounts.newOrders}
+                </MDTypography>
+              </MDBox>
+            </Card>
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <Card onClick={() => handleNavigate("order")} sx={{ cursor: "pointer" }}>
+              <MDBox p={2} display="flex" justifyContent="space-between" alignItems="center">
+                <MDTypography variant="h6">E-cosultation</MDTypography>
+                <MDTypography variant="h4" color="primary">
+                  {vendorCounts.newOrders}
+                </MDTypography>
+              </MDBox>
+            </Card>
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <Card onClick={() => handleNavigate("report")} sx={{ cursor: "pointer" }}>
+              <MDBox p={2} display="flex" justifyContent="space-between" alignItems="center">
+                <MDTypography variant="h6">Uploaded Invoice</MDTypography>
+                <MDTypography variant="h4" color="primary">
+                  {vendorCounts.newOrders}
+                </MDTypography>
+              </MDBox>
+            </Card>
+          </Grid>
+
+          {/* Lab Orders Section */}
+          <Grid item xs={12} mt={1}>
+            <MDTypography variant="h4" textAlign="left" mb={2} ml={2}>
+              Lab Orders
+            </MDTypography>
+          </Grid>
+
+          <Grid item xs={12} md={3}>
+            <Card onClick={() => handleNavigate("order")} sx={{ cursor: "pointer" }}>
+              <MDBox p={2} display="flex" justifyContent="space-between" alignItems="center">
+                <MDTypography variant="h6">New Order</MDTypography>
+                <MDTypography variant="h4" color="primary">
+                  {vendorCounts.newOrders}
+                </MDTypography>
+              </MDBox>
+            </Card>
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <Card onClick={() => handleNavigate("order")} sx={{ cursor: "pointer" }}>
+              <MDBox p={2} display="flex" justifyContent="space-between" alignItems="center">
+                <MDTypography variant="h6">Pending Orders</MDTypography>
+                <MDTypography variant="h4" color="primary">
+                  {vendorCounts.pendingOrders}
+                </MDTypography>
+              </MDBox>
+            </Card>
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <Card onClick={() => handleNavigate("order")} sx={{ cursor: "pointer" }}>
+              <MDBox p={2} display="flex" justifyContent="space-between" alignItems="center">
+                <MDTypography variant="h6">Completed Orders</MDTypography>
+                <MDTypography variant="h4" color="primary">
+                  {vendorCounts.completedOrders}
+                </MDTypography>
+              </MDBox>
+            </Card>
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <Card onClick={() => handleNavigate("order")} sx={{ cursor: "pointer" }}>
+              <MDBox p={2} display="flex" justifyContent="space-between" alignItems="center">
+                <MDTypography variant="h6">Partial Orders</MDTypography>
+                <MDTypography variant="h4" color="primary">
+                  {vendorCounts.partiallyDeliveredOrders}
+                </MDTypography>
+              </MDBox>
+            </Card>
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <Card onClick={() => handleNavigate("order")} sx={{ cursor: "pointer" }}>
+              <MDBox p={2} display="flex" justifyContent="space-between" alignItems="center">
+                <MDTypography variant="h6">call to modify Order</MDTypography>
+                <MDTypography variant="h4" color="primary">
+                  {vendorCounts.newOrders}
+                </MDTypography>
+              </MDBox>
+            </Card>
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <Card onClick={() => handleNavigate("report")} sx={{ cursor: "pointer" }}>
+              <MDBox p={2} display="flex" justifyContent="space-between" alignItems="center">
+                <MDTypography variant="h6">Uploaded Lab reports</MDTypography>
+                <MDTypography variant="h4" color="primary">
+                  {vendorCounts.newOrders}
+                </MDTypography>
+              </MDBox>
+            </Card>
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <Card onClick={() => handleNavigate("report")} sx={{ cursor: "pointer" }}>
+              <MDBox p={2} display="flex" justifyContent="space-between" alignItems="center">
+                <MDTypography variant="h6">Uploaded invoices</MDTypography>
+                <MDTypography variant="h4" color="primary">
+                  {vendorCounts.newOrders}
+                </MDTypography>
+              </MDBox>
+            </Card>
           </Grid>
         </Grid>
       </MDBox>
@@ -115,4 +266,4 @@ function Dashboard() {
   );
 }
 
-export default Dashboard;
+export default OrdersDashboard;

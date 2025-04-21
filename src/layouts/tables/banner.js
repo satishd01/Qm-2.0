@@ -24,6 +24,9 @@ import CircularProgress from "@mui/material/CircularProgress";
 import Snackbar from "@mui/material/Snackbar";
 import MuiAlert from "@mui/material/Alert";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
+import Autocomplete from "@mui/material/Autocomplete";
+import Chip from "@mui/material/Chip";
+import Box from "@mui/material/Box";
 
 const Alert = React.forwardRef(function Alert(props, ref) {
   return <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />;
@@ -33,7 +36,9 @@ function Banners() {
   const navigate = useNavigate();
   const theme = useTheme();
   const [banners, setBanners] = useState([]);
+  const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [productsLoading, setProductsLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [open, setOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -50,6 +55,9 @@ function Banners() {
     link: "",
     title: "",
     description: "",
+    productId: "",
+    type: "image 1",
+    status: "Active",
   });
 
   const baseUrl = process.env.REACT_APP_BASE_URL || "https://quickmeds.sndktech.online";
@@ -64,6 +72,9 @@ function Banners() {
       link: "",
       title: "",
       description: "",
+      productId: "",
+      type: "image 1",
+      status: "Active",
     });
   };
 
@@ -92,14 +103,53 @@ function Banners() {
       }
     } catch (error) {
       console.error("Error fetching banners:", error);
-      window.alert(error.message);
+      setSnackbar({
+        open: true,
+        message: error.message,
+        severity: "error",
+      });
     } finally {
       setLoading(false);
     }
   };
 
+  const fetchProducts = async () => {
+    try {
+      setProductsLoading(true);
+      const token = localStorage.getItem("token");
+      if (!token) {
+        navigate("/authentication/sign-in");
+        return;
+      }
+
+      const response = await fetch(`${baseUrl}/product.get`, {
+        headers: {
+          "x-authorization": xAuthHeader,
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data?.message || "Failed to fetch products");
+
+      if (data?.status && data.products) {
+        setProducts(data.products);
+      }
+    } catch (error) {
+      console.error("Error fetching products:", error);
+      setSnackbar({
+        open: true,
+        message: error.message,
+        severity: "error",
+      });
+    } finally {
+      setProductsLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchBanners();
+    fetchProducts();
   }, [currentPage]);
 
   const handleInputChange = (e) => {
@@ -107,6 +157,13 @@ function Banners() {
     setNewBanner({
       ...newBanner,
       [name]: value,
+    });
+  };
+
+  const handleProductChange = (event, value) => {
+    setNewBanner({
+      ...newBanner,
+      productId: value ? value.id : "",
     });
   };
 
@@ -146,7 +203,11 @@ function Banners() {
       }
     } catch (error) {
       console.error("Upload error:", error);
-      window.alert(error.message);
+      setSnackbar({
+        open: true,
+        message: error.message,
+        severity: "error",
+      });
     } finally {
       setUploading(false);
     }
@@ -157,8 +218,12 @@ function Banners() {
       const token = localStorage.getItem("token");
       setLoading(true);
 
-      if (!newBanner.image || !newBanner.link) {
-        window.alert("Image and Link are required fields");
+      if (!newBanner.image) {
+        setSnackbar({
+          open: true,
+          message: "Image is required",
+          severity: "error",
+        });
         return;
       }
 
@@ -175,7 +240,11 @@ function Banners() {
       const data = await response.json();
       if (!response.ok) throw new Error(data?.message || "Failed to create banner");
 
-      window.alert("Banner created successfully!");
+      setSnackbar({
+        open: true,
+        message: "Banner created successfully!",
+        severity: "success",
+      });
 
       // Reset form and state
       setNewBanner({
@@ -183,6 +252,9 @@ function Banners() {
         link: "",
         title: "",
         description: "",
+        productId: "",
+        type: "image 1",
+        status: "Active",
       });
 
       setCurrentPage(1);
@@ -190,7 +262,11 @@ function Banners() {
       handleClose();
     } catch (error) {
       console.error("Error creating banner:", error);
-      window.alert(error.message);
+      setSnackbar({
+        open: true,
+        message: error.message,
+        severity: "error",
+      });
     } finally {
       setLoading(false);
     }
@@ -216,12 +292,20 @@ function Banners() {
         throw new Error(data?.message || "Failed to delete banner");
       }
 
-      window.alert("Banner deleted successfully!");
+      setSnackbar({
+        open: true,
+        message: "Banner deleted successfully!",
+        severity: "success",
+      });
       setCurrentPage(1);
       await fetchBanners();
     } catch (error) {
       console.error("Error deleting banner:", error);
-      window.alert(error.message);
+      setSnackbar({
+        open: true,
+        message: error.message,
+        severity: "error",
+      });
     } finally {
       setLoading(false);
     }
@@ -231,11 +315,32 @@ function Banners() {
     {
       Header: "Image",
       accessor: "image",
-      Cell: ({ value }) => <img src={value} alt="banner" style={{ height: 60, width: "auto" }} />,
+      Cell: ({ value }) => (
+        <Box sx={{ width: 100, height: 60, overflow: "hidden" }}>
+          {value.includes(".mp4") ? (
+            <video
+              autoPlay
+              loop
+              muted
+              style={{ height: "100%", width: "100%", objectFit: "cover" }}
+            >
+              <source src={value} type="video/mp4" />
+            </video>
+          ) : (
+            <img
+              src={value}
+              alt="banner"
+              style={{ height: "100%", width: "100%", objectFit: "cover" }}
+            />
+          )}
+        </Box>
+      ),
     },
     { Header: "Link", accessor: "link" },
     { Header: "Title", accessor: "title" },
     { Header: "Status", accessor: "status" },
+    { Header: "Type", accessor: "type" },
+    { Header: "Product ID", accessor: "productId" },
     { Header: "Created At", accessor: "createdAt" },
     {
       Header: "Actions",
@@ -253,7 +358,9 @@ function Banners() {
     return (
       (banner.title || "").toLowerCase().includes(search) ||
       (banner.link || "").toLowerCase().includes(search) ||
-      (banner.status || "").toLowerCase().includes(search)
+      (banner.status || "").toLowerCase().includes(search) ||
+      (banner.type || "").toLowerCase().includes(search) ||
+      (banner.productId?.toString() || "").includes(search)
     );
   });
 
@@ -360,7 +467,7 @@ function Banners() {
                 id="bannerImageInput"
                 onChange={handleImageUpload}
                 style={{ display: "none" }}
-                accept="image/*"
+                accept="image/*,video/*"
               />
               <label htmlFor="bannerImageInput">
                 <Button
@@ -371,22 +478,28 @@ function Banners() {
                   disabled={uploading}
                   fullWidth
                 >
-                  {uploading ? "Uploading..." : "Upload Banner Image"}
+                  {uploading ? "Uploading..." : "Upload Banner Image/Video"}
                 </Button>
               </label>
               {newBanner.image && (
                 <MDBox mt={2}>
-                  <img
-                    src={newBanner.image}
-                    alt="Preview"
-                    style={{ maxWidth: "100%", maxHeight: 200 }}
-                  />
+                  {newBanner.image.includes(".mp4") ? (
+                    <video controls style={{ maxWidth: "100%", maxHeight: 200 }}>
+                      <source src={newBanner.image} type="video/mp4" />
+                    </video>
+                  ) : (
+                    <img
+                      src={newBanner.image}
+                      alt="Preview"
+                      style={{ maxWidth: "100%", maxHeight: 200 }}
+                    />
+                  )}
                 </MDBox>
               )}
             </Grid>
             <Grid item xs={12}>
               <TextField
-                label="Link *"
+                label="Link"
                 name="link"
                 value={newBanner.link}
                 onChange={handleInputChange}
@@ -416,6 +529,63 @@ function Banners() {
                 rows={3}
               />
             </Grid>
+            <Grid item xs={12}>
+              <Autocomplete
+                options={products}
+                getOptionLabel={(option) => option.productName || ""}
+                onChange={handleProductChange}
+                loading={productsLoading}
+                renderInput={(params) => (
+                  <TextField {...params} label="Select Product" margin="normal" fullWidth />
+                )}
+                renderOption={(props, option) => (
+                  <li {...props} key={option.id}>
+                    {option.productName}
+                  </li>
+                )}
+                renderTags={(value, getTagProps) =>
+                  value.map((option, index) => (
+                    <Chip {...getTagProps({ index })} key={option.id} label={option.productName} />
+                  ))
+                }
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                select
+                label="Type"
+                name="type"
+                value={newBanner.type}
+                onChange={handleInputChange}
+                fullWidth
+                margin="normal"
+                SelectProps={{
+                  native: true,
+                }}
+              >
+                <option value="image 1">Image 1</option>
+                <option value="image 2">Image 2</option>
+                <option value="image 3">Image 3</option>
+                <option value="image 4">Image 4</option>
+              </TextField>
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                select
+                label="Status"
+                name="status"
+                value={newBanner.status}
+                onChange={handleInputChange}
+                fullWidth
+                margin="normal"
+                SelectProps={{
+                  native: true,
+                }}
+              >
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
+              </TextField>
+            </Grid>
           </Grid>
         </DialogContent>
         <DialogActions>
@@ -424,7 +594,7 @@ function Banners() {
             onClick={handleCreateBanner}
             color="error"
             variant="contained"
-            disabled={!newBanner.image || !newBanner.link || loading}
+            disabled={!newBanner.image || loading}
           >
             {loading ? "Creating..." : "Create Banner"}
           </Button>
@@ -460,7 +630,7 @@ Banners.propTypes = {
       createdAt: PropTypes.string.isRequired,
     }).isRequired,
   }).isRequired,
-  value: PropTypes.any, // Add validation for `value` here
+  value: PropTypes.any,
 };
 
 export default Banners;

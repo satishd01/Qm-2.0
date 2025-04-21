@@ -34,53 +34,94 @@ function Vendors() {
     deviceToken: "",
     name: "",
     email: "",
-    vendor_type: "Medicine Vendor", // Default vendor type
+    vendor_type: "Medicine Vendor",
   });
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(5);
+  const [pageSize, setPageSize] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
   const [selectedVendorType, setSelectedVendorType] = useState("Medicine Vendor");
+  const [vendorCounts, setVendorCounts] = useState({
+    medicine: 0,
+    lab: 0,
+  });
 
   const baseUrl = process.env.REACT_APP_BASE_URL || "https://quickmeds.sndktech.online";
 
   const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);
 
-  useEffect(() => {
-    const fetchVendors = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        if (!token) {
-          console.error("No token found, please login again");
-          return;
-        }
+  // Fetch vendor counts for both types
+  const fetchVendorCounts = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) return;
 
-        // URL encode the vendor type
-        const encodedVendorType = encodeURIComponent(selectedVendorType);
-        const response = await fetch(
-          `${baseUrl}/vendor.get1?vendor_type=${encodedVendorType}&page=${currentPage}&page_size=${pageSize}&search=${searchTerm}`,
-          {
-            headers: {
-              "x-authorization": "RGVlcGFrS3-VzaHdhaGE5Mzk5MzY5ODU0-QWxoblBvb2ph",
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
+      const [medicineRes, labRes] = await Promise.all([
+        fetch(`${baseUrl}/vendor.get1?vendor_type=Medicine Vendor&page=1&page_size=1`, {
+          headers: {
+            "x-authorization": "RGVlcGFrS3-VzaHdhaGE5Mzk5MzY5ODU0-QWxoblBvb2ph",
+            Authorization: `Bearer ${token}`,
+          },
+        }),
+        fetch(`${baseUrl}/vendor.get1?vendor_type=Lab Vendor&page=1&page_size=1`, {
+          headers: {
+            "x-authorization": "RGVlcGFrS3-VzaHdhaGE5Mzk5MzY5ODU0-QWxoblBvb2ph",
+            Authorization: `Bearer ${token}`,
+          },
+        }),
+      ]);
 
-        const data = await response.json();
-        if (data && data.vendors) {
-          setVendors(data.vendors);
-          setTotalPages(data.totalPages || 1);
-        } else {
-          console.error("No vendor data found in the response.");
-        }
-      } catch (error) {
-        console.error("Error fetching vendor data:", error);
-      } finally {
-        setLoading(false);
+      const medicineData = await medicineRes.json();
+      const labData = await labRes.json();
+
+      setVendorCounts({
+        medicine: medicineData.total || 0,
+        lab: labData.total || 0,
+      });
+    } catch (error) {
+      console.error("Error fetching vendor counts:", error);
+    }
+  };
+
+  // Fetch vendors based on selected type
+  const fetchVendors = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        console.error("No token found, please login again");
+        return;
       }
-    };
 
+      const encodedVendorType = encodeURIComponent(selectedVendorType);
+      const response = await fetch(
+        `${baseUrl}/vendor.get1?vendor_type=${encodedVendorType}&page=${currentPage}&page_size=${pageSize}&search=${searchTerm}`,
+        {
+          headers: {
+            "x-authorization": "RGVlcGFrS3-VzaHdhaGE5Mzk5MzY5ODU0-QWxoblBvb2ph",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      const data = await response.json();
+      if (data && data.vendors) {
+        setVendors(data.vendors);
+        setTotalPages(data.totalPages || 1);
+      } else {
+        console.error("No vendor data found in the response.");
+      }
+    } catch (error) {
+      console.error("Error fetching vendor data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchVendorCounts();
+  }, []);
+
+  useEffect(() => {
     fetchVendors();
   }, [currentPage, pageSize, searchTerm, selectedVendorType]);
 
@@ -105,29 +146,20 @@ function Vendors() {
       });
 
       const data = await response.json();
-      console.log("API response:", data);
 
       if (response.ok) {
         window.alert("Vendor created successfully!");
         handleClose();
         setCurrentPage(1);
-
-        // Refresh the vendor list
-        const encodedVendorType = encodeURIComponent(selectedVendorType);
-        const refreshResponse = await fetch(
-          `${baseUrl}/vendor.get1?vendor_type=${encodedVendorType}&page=1&page_size=${pageSize}`,
-          {
-            headers: {
-              "x-authorization": "RGVlcGFrS3-VzaHdhaGE5Mzk5MzY5ODU0-QWxoblBvb2ph",
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-        const refreshData = await refreshResponse.json();
-        if (refreshData && refreshData.vendors) {
-          setVendors(refreshData.vendors);
-          setTotalPages(refreshData.totalPages || 1);
-        }
+        await fetchVendors();
+        await fetchVendorCounts();
+        setNewVendor({
+          phoneNumber: "",
+          deviceToken: "",
+          name: "",
+          email: "",
+          vendor_type: "Medicine Vendor",
+        });
       } else {
         window.alert("Error: " + (data.message || "Failed to create vendor"));
       }
@@ -176,6 +208,32 @@ function Vendors() {
       <DashboardNavbar />
       <MDBox pt={6} pb={3}>
         <Grid container spacing={6}>
+          {/* Vendor Count Cards */}
+          <Grid item xs={12} md={6}>
+            <Card
+              onClick={() => setSelectedVendorType("Medicine Vendor")}
+              sx={{ cursor: "pointer" }}
+            >
+              <MDBox p={3} display="flex" justifyContent="space-between" alignItems="center">
+                <MDTypography variant="h6">Medicine Vendors</MDTypography>
+                <MDTypography variant="h4" color="primary">
+                  {vendorCounts.medicine}
+                </MDTypography>
+              </MDBox>
+            </Card>
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <Card onClick={() => setSelectedVendorType("Lab Vendor")} sx={{ cursor: "pointer" }}>
+              <MDBox p={3} display="flex" justifyContent="space-between" alignItems="center">
+                <MDTypography variant="h6">Lab Vendors</MDTypography>
+                <MDTypography variant="h4" color="primary">
+                  {vendorCounts.lab}
+                </MDTypography>
+              </MDBox>
+            </Card>
+          </Grid>
+
+          {/* Main Table */}
           <Grid item xs={12}>
             <Card>
               <MDBox
@@ -195,23 +253,25 @@ function Vendors() {
                   flexWrap="wrap"
                 >
                   <MDTypography variant="h6" color="black">
-                    Vendors
+                    {selectedVendorType === "Medicine Vendor" ? "Medicine" : "Lab"} Vendors
                   </MDTypography>
                   <MDBox display="flex" gap={2} flexWrap="wrap" alignItems="center">
-                    <FormControl sx={{ minWidth: 200 }} size="small">
-                      <InputLabel>Vendor Type</InputLabel>
+                    {/* <FormControl sx={{ minWidth: 200 }} size="small">
+                      <InputLabel>Page Size</InputLabel>
                       <Select
-                        value={selectedVendorType}
-                        label="Vendor Type"
+                        value={pageSize}
+                        label="Page Size"
                         onChange={(e) => {
-                          setSelectedVendorType(e.target.value);
-                          setCurrentPage(1); // Reset to first page when changing vendor type
+                          setPageSize(e.target.value);
+                          setCurrentPage(1);
                         }}
                       >
-                        <MenuItem value="Medicine Vendor">Medicine Vendor</MenuItem>
-                        <MenuItem value="Lab Vendor">Lab Vendor</MenuItem>
+                        <MenuItem value={5}>5 per page</MenuItem>
+                        <MenuItem value={10}>10 per page</MenuItem>
+                        <MenuItem value={25}>25 per page</MenuItem>
+                        <MenuItem value={50}>50 per page</MenuItem>
                       </Select>
-                    </FormControl>
+                    </FormControl> */}
                     <TextField
                       label="Search by Vendor Name or Email"
                       type="text"
@@ -247,6 +307,8 @@ function Vendors() {
         </Grid>
       </MDBox>
       <Footer />
+
+      {/* Create Vendor Dialog */}
       <Dialog open={open} onClose={handleClose} fullWidth maxWidth="sm">
         <DialogTitle>Create New Vendor</DialogTitle>
         <DialogContent>

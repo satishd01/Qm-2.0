@@ -57,11 +57,12 @@ const Alert = React.forwardRef(function Alert(props, ref) {
 const DEFAULT_PAGE_SIZE = 10;
 const ORDER_STATUSES = [
   "All",
-  "New-Order",
-  "Partially-Accepted",
   "Accepted",
   "Rejected",
   "Delivered",
+  "Pending",
+  "New-Order",
+  "Partially-Accepted",
   "Partially-Delivered",
   "Cart-Accept",
   "call-me-to-modify",
@@ -120,7 +121,7 @@ function Orders() {
     searchTerm: "",
     currentPage: 1,
     totalPages: 1,
-    selectedStatus: "Accepted",
+    selectedStatus: "All",
     snackbar: {
       open: false,
       message: "",
@@ -130,6 +131,22 @@ function Orders() {
     users: [],
     loadingVendors: false,
     loadingUsers: false,
+    // const orderCounts = {
+    //   all: 0,
+    //   accepted: 0,
+    //   rejected: 0,
+    //   delivered: 0,
+    //   pending: 0,
+    //   "New-Order": 0,  // Key with a hyphen - must be in quotes
+    //   "Partially-Accepted": 0,  // Key with a hyphen - must be in quotes
+    //   "Partially-Delivered": 0,  // Key with a hyphen - must be in quotes
+    //   "Cart-Accept": 0,  // Key with a hyphen - must be in quotes
+    //   "call-me-to-modify": 0,  // Key with a hyphen - must be in quotes
+    //   "call-me-to-how-to-take-medicine": 0,  // Key with a hyphen - must be in quotes
+    //   "Cancel-order": 0,  // Key with a hyphen - must be in quotes
+    //   "return-order-request": 0,  // Key with a hyphen - must be in quotes
+    //   "E-Consultation": 0,  // Key with a hyphen - must be in quotes
+    // };
   });
   const [dialogState, setDialogState] = useState({
     viewOpen: false,
@@ -158,6 +175,62 @@ function Orders() {
   const baseUrl = process.env.REACT_APP_BASE_URL || "https://quickmeds.sndktech.online";
   const xAuthHeader =
     process.env.REACT_APP_X_AUTHORIZATION || "RGVlcGFrS3-VzaHdhaGE5Mzk5MzY5ODU4-QWxoblBvb2ph";
+
+  // Fetch order counts for all statuses
+  const fetchOrderCounts = useCallback(async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+
+      const responses = await Promise.all([
+        fetch(`${baseUrl}/adminOrders1/All?page=1&page_size=1`, {
+          headers: {
+            "x-authorization": xAuthHeader,
+            Authorization: `Bearer ${token}`,
+          },
+        }),
+        fetch(`${baseUrl}/adminOrders1/Accepted?page=1&page_size=1`, {
+          headers: {
+            "x-authorization": xAuthHeader,
+            Authorization: `Bearer ${token}`,
+          },
+        }),
+        fetch(`${baseUrl}/adminOrders1/Rejected?page=1&page_size=1`, {
+          headers: {
+            "x-authorization": xAuthHeader,
+            Authorization: `Bearer ${token}`,
+          },
+        }),
+        fetch(`${baseUrl}/adminOrders1/Delivered?page=1&page_size=1`, {
+          headers: {
+            "x-authorization": xAuthHeader,
+            Authorization: `Bearer ${token}`,
+          },
+        }),
+        fetch(`${baseUrl}/adminOrders1/Pending?page=1&page_size=1`, {
+          headers: {
+            "x-authorization": xAuthHeader,
+            Authorization: `Bearer ${token}`,
+          },
+        }),
+      ]);
+
+      const data = await Promise.all(responses.map((res) => res.json()));
+
+      setState((prev) => ({
+        ...prev,
+        orderCounts: {
+          all: data[0]?.total || 0,
+          accepted: data[1]?.total || 0,
+          rejected: data[2]?.total || 0,
+          delivered: data[3]?.total || 0,
+          pending: data[4]?.total || 0,
+        },
+      }));
+    } catch (error) {
+      console.error("Error fetching order counts:", error);
+    }
+  }, [baseUrl, xAuthHeader]);
 
   // Fetch vendors
   const fetchVendors = useCallback(async () => {
@@ -256,7 +329,7 @@ function Orders() {
         setState((prev) => ({
           ...prev,
           orders: data.orders,
-          totalPages: Math.ceil(data.orders.length / DEFAULT_PAGE_SIZE),
+          totalPages: Math.ceil(data.total / DEFAULT_PAGE_SIZE),
           loading: false,
         }));
       }
@@ -275,10 +348,11 @@ function Orders() {
   }, [state.currentPage, state.selectedStatus, baseUrl, xAuthHeader]);
 
   useEffect(() => {
+    fetchOrderCounts();
     fetchOrders();
     fetchVendors();
     fetchUsers();
-  }, [fetchOrders, fetchVendors, fetchUsers]);
+  }, [fetchOrderCounts, fetchOrders, fetchVendors, fetchUsers]);
 
   const handleCreateOrder = async () => {
     try {
@@ -343,6 +417,7 @@ function Orders() {
       });
       setDialogState((prev) => ({ ...prev, createOpen: false }));
       await fetchOrders();
+      await fetchOrderCounts();
     } catch (error) {
       console.error("Error creating order:", error);
       setState((prev) => ({
@@ -387,6 +462,7 @@ function Orders() {
         },
       }));
       await fetchOrders();
+      await fetchOrderCounts();
     } catch (error) {
       console.error("Error updating order status:", error);
       setState((prev) => ({
@@ -468,7 +544,7 @@ function Orders() {
       accessor: "user",
       Cell: CustomerCell,
     },
-    { Header: "Address", accessor: "address" },
+    // { Header: "Address", accessor: "address" },
     { Header: "Amount", accessor: "amount" },
     { Header: "Order Date", accessor: "createdAt" },
     {
@@ -535,10 +611,125 @@ function Orders() {
     <DashboardLayout>
       <DashboardNavbar />
       <MDBox pt={6} pb={3}>
-        <Grid container spacing={6}>
-          <Grid item xs={12}>
+        <Grid container spacing={3}>
+          {/* Order Count Cards */}
+          <Grid container spacing={2}>
+            {/* Existing cards */}
+            {/* All */}
+            {/* <Grid item xs={12} sm={6} md={2.4}>
+              <Card
+                onClick={() =>
+                  setState((prev) => ({ ...prev, selectedStatus: "All", currentPage: 1 }))
+                }
+                sx={{
+                  cursor: "pointer",
+                  border: state.selectedStatus === "All" ? "2px solid #1976d2" : "none",
+                  height: "100%",
+                  transition: "transform 0.2s",
+                  "&:hover": {
+                    transform: "scale(1.02)",
+                    boxShadow: 3,
+                  },
+                }}
+              >
+                <MDBox p={2} textAlign="center">
+                  <MDTypography variant="h6">All Orders</MDTypography>
+                  <MDTypography variant="h4" color="primary">
+                    {state.orderCounts.all}
+                  </MDTypography>
+                </MDBox>
+              </Card>
+            </Grid> */}
+
+            {/* Repeat similar for others */}
+            {[
+              { label: "All", status: "All", color: "info", borderColor: "#0288d1" },
+              { label: "Accepted", status: "Accepted", color: "success", borderColor: "#2e7d32" },
+              { label: "Rejected", status: "Rejected", color: "error", borderColor: "#d32f2f" },
+              { label: "Delivered", status: "Delivered", color: "success", borderColor: "#2e7d32" },
+              { label: "Pending", status: "Pending", color: "warning", borderColor: "#ed6c02" },
+              { label: "New-Order", status: "New-Order", color: "info", borderColor: "#0288d1" },
+              {
+                label: "Partially-Accepted",
+                status: "Partially-Accepted",
+                color: "info",
+                borderColor: "#0288d1",
+              },
+              {
+                label: "Partially-Delivered",
+                status: "Partially-Delivered",
+                color: "info",
+                borderColor: "#0288d1",
+              },
+              {
+                label: "Cart-Accept",
+                status: "Cart-Accept",
+                color: "secondary",
+                borderColor: "#7b1fa2",
+              },
+              {
+                label: "Call Me To Modify",
+                status: "call-me-to-modify",
+                color: "secondary",
+                borderColor: "#7b1fa2",
+              },
+              {
+                label: "Call Me - How To Take Medicine",
+                status: "call-me-to-how-to-take-medicine",
+                color: "secondary",
+                borderColor: "#7b1fa2",
+              },
+              {
+                label: "Cancel Order",
+                status: "Cancel-order",
+                color: "error",
+                borderColor: "#c62828",
+              },
+              {
+                label: "Return Order Request",
+                status: "return-order-request",
+                color: "warning",
+                borderColor: "#f57c00",
+              },
+              {
+                label: "E-Consultation",
+                status: "E-Consultation",
+                color: "info",
+                borderColor: "#0288d1",
+              },
+            ].map(({ label, status, color, borderColor }) => (
+              <Grid key={status} item xs={1} sm={3} md={2.4}>
+                <Card
+                  onClick={() =>
+                    setState((prev) => ({ ...prev, selectedStatus: status, currentPage: 1 }))
+                  }
+                  sx={{
+                    cursor: "pointer",
+                    border: state.selectedStatus === status ? `2px solid ${borderColor}` : "none",
+                    height: "100%",
+                    transition: "transform 0.2s",
+                    "&:hover": {
+                      transform: "scale(1.02)",
+                      boxShadow: 3,
+                    },
+                  }}
+                >
+                  <MDBox p={2} textAlign="center">
+                    <MDTypography variant="h6">{label}</MDTypography>
+                    <MDTypography variant="h4" color={color}>
+                      {state.orderCounts[status]}
+                    </MDTypography>
+                  </MDBox>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+
+          {/* Main Table */}
+          <Grid item xs={12} mt={2}>
             <Card>
               <MDBox
+                m={1}
                 mx={2}
                 mt={-3}
                 py={3}
@@ -555,29 +746,9 @@ function Orders() {
                   flexWrap="wrap"
                 >
                   <MDTypography variant="h6" color="black">
-                    Order
+                    {state.selectedStatus === "All" ? "All" : state.selectedStatus} Orders
                   </MDTypography>
                   <MDBox display="flex" gap={2} flexWrap="wrap" alignItems="center">
-                    <FormControl sx={{ minWidth: 150 }} size="small">
-                      <InputLabel>Status</InputLabel>
-                      <Select
-                        value={state.selectedStatus}
-                        label="Status"
-                        onChange={(e) =>
-                          setState((prev) => ({
-                            ...prev,
-                            selectedStatus: e.target.value,
-                            currentPage: 1,
-                          }))
-                        }
-                      >
-                        {ORDER_STATUSES.map((status) => (
-                          <MenuItem key={status} value={status}>
-                            {status}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
                     <TextField
                       label="Search Orders"
                       value={state.searchTerm}
@@ -929,6 +1100,7 @@ function Orders() {
                   label="Select User"
                   onChange={(e) => setNewOrder((prev) => ({ ...prev, userId: e.target.value }))}
                   disabled={state.loadingUsers}
+                  sx={{ width: 350, height: 45 }}
                 >
                   {state.users.map((user) => (
                     <MenuItem key={user.id} value={user.id}>
@@ -945,6 +1117,7 @@ function Orders() {
                   label="Select Vendor"
                   onChange={(e) => setNewOrder((prev) => ({ ...prev, vendorId: e.target.value }))}
                   disabled={state.loadingVendors}
+                  sx={{ width: 350, height: 45 }}
                 >
                   {state.vendors.map((vendor) => (
                     <MenuItem key={vendor.id} value={vendor.id}>
@@ -1012,6 +1185,7 @@ function Orders() {
                   onChange={(e) =>
                     setNewOrder((prev) => ({ ...prev, PaymentType: e.target.value }))
                   }
+                  sx={{ width: 350, height: 45 }}
                 >
                   <MenuItem value="COD">Cash on Delivery</MenuItem>
                   <MenuItem value="Online">Online Payment</MenuItem>
@@ -1023,6 +1197,7 @@ function Orders() {
                   value={newOrder.vendorType}
                   label="Vendor Type"
                   onChange={(e) => setNewOrder((prev) => ({ ...prev, vendorType: e.target.value }))}
+                  sx={{ width: 350, height: 45 }}
                 >
                   <MenuItem value="Medicine Vendor">Medicine Vendor</MenuItem>
                   <MenuItem value="Lab Vendor">Lab Vendor</MenuItem>

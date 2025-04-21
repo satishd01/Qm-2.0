@@ -24,11 +24,12 @@ import Packages from "layouts/tables/package";
 import Reports from "layouts/tables/invoiceandreports";
 import Inquiries from "layouts/tables/inquries";
 import InsurancePlansManagement from "layouts/tables/insurance";
+import PaymentTransactions from "layouts/tables/accountsection";
 
 const routes = [
   {
     type: "collapse",
-    name: "Menu",
+    name: "Dashboard",
     key: "dashboard",
     icon: <Icon fontSize="small">dashboard</Icon>, // keep the default dashboard icon
     route: "/dashboard",
@@ -39,7 +40,7 @@ const routes = [
     name: "User",
     key: "user",
     icon: <Icon fontSize="small">people</Icon>, // people icon for users
-    route: "/user",
+    route: "/users",
     component: <Users />,
   },
   {
@@ -161,6 +162,14 @@ const routes = [
     icon: <Icon fontSize="small">assignment</Icon>, // assignment icon for orders
     route: "/order",
     component: <Orders />,
+  },
+  {
+    type: "collapse",
+    name: "Account Section",
+    key: "Account-section",
+    icon: <Icon fontSize="small">emoji_events</Icon>, // emoji_events icon for incentives
+    route: "/account-section",
+    component: <PaymentTransactions />,
   },
   {
     type: "collapse",
