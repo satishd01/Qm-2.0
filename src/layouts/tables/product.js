@@ -24,6 +24,7 @@ import {
   Chip,
   Snackbar,
   Alert,
+  OutlinedInput,
 } from "@mui/material";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
@@ -92,6 +93,9 @@ const generateSampleData = () => {
         advice: "Fast&Up Charge is a completely natural Vitamin C supplement...",
       }),
       "Author ID": 1,
+      Specification: "Contains 1000mg of natural Amla extract with 10mg of Zinc per tablet",
+      Strength: "1000mg",
+      Quantity: 30,
     },
   ];
 };
@@ -117,6 +121,8 @@ function Products() {
     totalPages: 1,
     categories: [],
     selectedCategory: "all",
+    molecules: [],
+    selectedMolecules: [],
     snackbar: {
       open: false,
       message: "",
@@ -165,11 +171,36 @@ function Products() {
     descriptions: "",
     references: "",
     country_of_origin: "",
+    product_molecule_id: "",
+    schedule_x_drug: false,
+    get_notified: false,
+    weight: "",
+    discount_price_percentage: 0,
+    discount_offered: false,
+    pin_code: "",
+    call_me_to_modify: false,
+    how_to_take_medicine: false,
+    specification: "",
+    strength: "",
+    quantity: 0,
+    stock: "Available",
   });
 
-  const baseUrl = process.env.REACT_APP_BASE_URL || "https://quickmeds.sndktech.online";
+  const baseUrl = process.env.REACT_APP_BASE_URL || "https://quickmeds.sndktech.online ";
   const xAuthHeader =
     process.env.REACT_APP_X_AUTHORIZATION || "RGVlcGFrS3-VzaHdhaGE5Mzk5MzY5ODU0-QWxoblBvb2ph";
+
+  // Calculate selling price when MRP or discount changes
+  useEffect(() => {
+    if (newProduct.mrp && newProduct.discount_price_percentage) {
+      const discountAmount = (newProduct.mrp * newProduct.discount_price_percentage) / 100;
+      const calculatedSellingPrice = newProduct.mrp - discountAmount;
+      setNewProduct((prev) => ({
+        ...prev,
+        sellingPrice: parseFloat(calculatedSellingPrice.toFixed(2)),
+      }));
+    }
+  }, [newProduct.mrp, newProduct.discount_price_percentage]);
 
   const fetchCategories = useCallback(async () => {
     try {
@@ -223,6 +254,32 @@ function Products() {
     }
   }, [baseUrl, xAuthHeader]);
 
+  const fetchMolecules = useCallback(async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${baseUrl}/molecule.get`, {
+        headers: {
+          "x-authorization": xAuthHeader,
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await response.json();
+      if (data?.data) {
+        setState((prev) => ({ ...prev, molecules: data.data }));
+      }
+    } catch (error) {
+      console.error("Error fetching molecules:", error);
+      setState((prev) => ({
+        ...prev,
+        snackbar: {
+          open: true,
+          message: "Failed to load molecules",
+          severity: "error",
+        },
+      }));
+    }
+  }, [baseUrl, xAuthHeader]);
+
   const fetchProducts = useCallback(async () => {
     try {
       setState((prev) => ({ ...prev, loading: true }));
@@ -266,7 +323,8 @@ function Products() {
   useEffect(() => {
     fetchCategories();
     fetchAuthors();
-  }, [fetchCategories, fetchAuthors]);
+    fetchMolecules();
+  }, [fetchCategories, fetchAuthors, fetchMolecules]);
 
   useEffect(() => {
     fetchProducts();
@@ -376,6 +434,7 @@ function Products() {
       }
 
       const productData = {
+        addedByType: "Vendor",
         productName: newProduct.productName,
         mrp: parseFloat(newProduct.mrp),
         sellingPrice: parseFloat(newProduct.sellingPrice),
@@ -385,10 +444,12 @@ function Products() {
         uses: newProduct.uses,
         age: newProduct.age,
         categoryId: parseInt(newProduct.categoryId),
+        category: newProduct.category,
         manufacturer: newProduct.manufacturer,
         consumeType: newProduct.consumeType,
         expireDate: newProduct.expireDate,
         packagingDetails: newProduct.packagingDetails,
+        stock: newProduct.stock,
         images: newProduct.images,
         variants: newProduct.variants,
         composition: newProduct.composition,
@@ -407,6 +468,18 @@ function Products() {
         descriptions: newProduct.descriptions,
         references: newProduct.references,
         country_of_origin: newProduct.country_of_origin,
+        product_molecule_id: state.selectedMolecules,
+        schedule_x_drug: newProduct.schedule_x_drug,
+        get_notified: newProduct.get_notified,
+        weight: newProduct.weight,
+        discount_price_percentage: newProduct.discount_price_percentage,
+        discount_offered: newProduct.discount_offered,
+        pin_code: newProduct.pin_code,
+        call_me_to_modify: newProduct.call_me_to_modify,
+        how_to_take_medicine: newProduct.how_to_take_medicine,
+        specification: newProduct.specification,
+        strength: newProduct.strength,
+        quantity: parseInt(newProduct.quantity),
       };
 
       const response = await fetch(`${baseUrl}/product.add`, {
@@ -465,6 +538,19 @@ function Products() {
         descriptions: "",
         references: "",
         country_of_origin: "",
+        product_molecule_id: "",
+        schedule_x_drug: false,
+        get_notified: false,
+        weight: "",
+        discount_price_percentage: 0,
+        discount_offered: false,
+        pin_code: "",
+        call_me_to_modify: false,
+        how_to_take_medicine: false,
+        specification: "",
+        strength: "",
+        quantity: 0,
+        stock: "Available",
       });
 
       setDialogState((prev) => ({ ...prev, open: false }));
@@ -510,6 +596,9 @@ function Products() {
       accessor: "isPrescriptionRequired",
       Cell: PrescriptionCell,
     },
+    { Header: "Strength", accessor: "strength" },
+    { Header: "Quantity", accessor: "quantity" },
+    { Header: "Stock", accessor: "stock" },
   ];
 
   const filteredProducts = state.products.filter((product) => {
@@ -522,7 +611,6 @@ function Products() {
   });
 
   const exportToExcel = () => {
-    // Transform the products data for Excel export
     const excelData = state.products.map((product) => {
       return {
         "Product Name": product.productName,
@@ -560,6 +648,9 @@ function Products() {
         References: product.references,
         "Country of Origin": product.country_of_origin,
         Discount: product.discount || "0%",
+        Specification: product.specification,
+        Strength: product.strength,
+        Quantity: product.quantity,
       };
     });
 
@@ -567,41 +658,43 @@ function Products() {
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Products");
 
-    // Auto-size columns
     const wscols = [
-      { wch: 30 }, // Product Name
-      { wch: 10 }, // MRP
-      { wch: 15 }, // Selling Price
-      { wch: 20 }, // Brand
-      { wch: 20 }, // Product Form
-      { wch: 15 }, // Uses
-      { wch: 15 }, // Age Group
-      { wch: 10 }, // Category ID
-      { wch: 15 }, // Category
-      { wch: 20 }, // Manufacturer
-      { wch: 15 }, // Consume Type
-      { wch: 15 }, // Expire Date
-      { wch: 25 }, // Packaging Details
-      { wch: 15 }, // Stock
-      { wch: 40 }, // Images
-      { wch: 60 }, // Variants
-      { wch: 40 }, // Composition
-      { wch: 40 }, // Product Introduction
-      { wch: 40 }, // Uses of Medication
-      { wch: 40 }, // Benefits
-      { wch: 40 }, // Contradictions
-      { wch: 20 }, // Prescription Required
-      { wch: 60 }, // Expert Advice
-      { wch: 60 }, // Substitute Products
-      { wch: 10 }, // Author ID
-      { wch: 20 }, // Sub Category
-      { wch: 30 }, // Direction to Use
-      { wch: 30 }, // Side Effects
-      { wch: 30 }, // Precautions While Using
-      { wch: 40 }, // Descriptions
-      { wch: 30 }, // References
-      { wch: 20 }, // Country of Origin
-      { wch: 10 }, // Discount
+      { wch: 30 },
+      { wch: 10 },
+      { wch: 15 },
+      { wch: 20 },
+      { wch: 20 },
+      { wch: 15 },
+      { wch: 15 },
+      { wch: 10 },
+      { wch: 15 },
+      { wch: 20 },
+      { wch: 15 },
+      { wch: 15 },
+      { wch: 25 },
+      { wch: 15 },
+      { wch: 40 },
+      { wch: 60 },
+      { wch: 40 },
+      { wch: 40 },
+      { wch: 40 },
+      { wch: 40 },
+      { wch: 40 },
+      { wch: 20 },
+      { wch: 60 },
+      { wch: 60 },
+      { wch: 10 },
+      { wch: 20 },
+      { wch: 30 },
+      { wch: 30 },
+      { wch: 30 },
+      { wch: 40 },
+      { wch: 30 },
+      { wch: 20 },
+      { wch: 10 },
+      { wch: 40 },
+      { wch: 15 },
+      { wch: 15 },
     ];
     worksheet["!cols"] = wscols;
 
@@ -620,9 +713,7 @@ function Products() {
       const worksheet = workbook.Sheets[sheetName];
       const jsonData = XLSX.utils.sheet_to_json(worksheet);
 
-      // Transform the data to match the API format
       const products = jsonData.map((row) => {
-        // Parse variants if they exist in the row
         let variants = [];
         try {
           if (row["Variants"]) {
@@ -633,7 +724,6 @@ function Products() {
           console.error("Error parsing variants:", e);
         }
 
-        // Parse expertAdvice if it exists in the row
         let expertAdvice = {};
         try {
           if (row["Expert Advice"]) {
@@ -646,7 +736,6 @@ function Products() {
           console.error("Error parsing expert advice:", e);
         }
 
-        // Parse substituteProducts if it exists in the row
         let substituteProducts = {};
         try {
           if (row["Substitute Products"]) {
@@ -659,7 +748,6 @@ function Products() {
           console.error("Error parsing substitute products:", e);
         }
 
-        // Parse images if they exist in the row
         let images = [];
         if (row["Images"]) {
           images =
@@ -704,10 +792,12 @@ function Products() {
           descriptions: row["Descriptions"] || "",
           references: row["References"] || "",
           country_of_origin: row["Country of Origin"] || "",
+          specification: row["Specification"] || "",
+          strength: row["Strength"] || "",
+          quantity: parseInt(row["Quantity"] || 0),
         };
       });
 
-      // Call the API to add multiple products
       const token = localStorage.getItem("token");
       fetch(`${baseUrl}/product.addmultiple`, {
         method: "POST",
@@ -919,6 +1009,7 @@ function Products() {
                   value={newProduct.categoryId}
                   onChange={handleInputChange}
                   label="Category *"
+                  sx={{ width: 350, height: 40 }}
                 >
                   {state.categories.map((category) => (
                     <MenuItem key={category.id} value={category.id}>
@@ -942,6 +1033,7 @@ function Products() {
                   value={newProduct.authorId}
                   onChange={handleInputChange}
                   label="Author *"
+                  sx={{ width: 350, height: 40 }}
                 >
                   {authors.map((author) => (
                     <MenuItem key={author.id} value={author.id}>
@@ -975,6 +1067,16 @@ function Products() {
                 fullWidth
                 margin="normal"
               />
+              <TextField
+                label="Specification"
+                name="specification"
+                value={newProduct.specification}
+                onChange={handleInputChange}
+                fullWidth
+                margin="normal"
+                multiline
+                rows={2}
+              />
             </Grid>
 
             <Grid item xs={12} md={6}>
@@ -988,6 +1090,15 @@ function Products() {
                 margin="normal"
               />
               <TextField
+                label="Discount Price Percentage"
+                name="discount_price_percentage"
+                type="number"
+                value={newProduct.discount_price_percentage}
+                onChange={handleInputChange}
+                fullWidth
+                margin="normal"
+              />
+              <TextField
                 label="Selling Price *"
                 name="sellingPrice"
                 type="number"
@@ -995,6 +1106,9 @@ function Products() {
                 onChange={handleInputChange}
                 fullWidth
                 margin="normal"
+                InputProps={{
+                  readOnly: true,
+                }}
               />
               <TextField
                 label="Expire Date"
@@ -1030,6 +1144,23 @@ function Products() {
                 fullWidth
                 margin="normal"
               />
+              <TextField
+                label="Strength"
+                name="strength"
+                value={newProduct.strength}
+                onChange={handleInputChange}
+                fullWidth
+                margin="normal"
+              />
+              <TextField
+                label="Quantity"
+                name="quantity"
+                type="number"
+                value={newProduct.quantity}
+                onChange={handleInputChange}
+                fullWidth
+                margin="normal"
+              />
               <FormControlLabel
                 control={
                   <Switch
@@ -1055,7 +1186,8 @@ function Products() {
                 <label htmlFor="productImages">
                   <Button
                     component="span"
-                    variant="outlined"
+                    variant="contained"
+                    color="error"
                     startIcon={<CloudUploadIcon />}
                     disabled={uploading}
                   >
@@ -1218,25 +1350,132 @@ function Products() {
                 rows={2}
               />
             </Grid>
+
+            <Grid item xs={12} md={6}>
+              <FormControl fullWidth margin="normal">
+                <InputLabel>Molecules</InputLabel>
+                <Select
+                  multiple
+                  value={state.selectedMolecules}
+                  onChange={(e) =>
+                    setState((prev) => ({
+                      ...prev,
+                      selectedMolecules: e.target.value,
+                    }))
+                  }
+                  input={<OutlinedInput label="Molecules" />}
+                  renderValue={(selected) => (
+                    <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
+                      {selected.map((value) => {
+                        const molecule = state.molecules.find((m) => m.id === value);
+                        return (
+                          <Chip key={value} label={molecule ? molecule.molecule_name : value} />
+                        );
+                      })}
+                    </Box>
+                  )}
+                  sx={{ width: 350, height: 40 }}
+                >
+                  {state.molecules.map((molecule) => (
+                    <MenuItem key={molecule.id} value={molecule.id}>
+                      {molecule.molecule_name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <TextField
+                label="Weight"
+                name="weight"
+                value={newProduct.weight}
+                onChange={handleInputChange}
+                fullWidth
+                margin="normal"
+              />
+              <TextField
+                label="Pin Code"
+                name="pin_code"
+                value={newProduct.pin_code}
+                onChange={handleInputChange}
+                fullWidth
+                margin="normal"
+              />
+              <FormControl fullWidth margin="normal">
+                <InputLabel>Stock Status</InputLabel>
+                <Select
+                  name="stock"
+                  value={newProduct.stock}
+                  onChange={handleInputChange}
+                  label="Stock Status"
+                >
+                  <MenuItem value="Available">Available</MenuItem>
+                  <MenuItem value="Out of Stock">Out of Stock</MenuItem>
+                  <MenuItem value="Limited Stock">Limited Stock</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+
+            <Grid item xs={12}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    name="schedule_x_drug"
+                    checked={newProduct.schedule_x_drug}
+                    onChange={handleBooleanChange}
+                  />
+                }
+                label="Schedule X Drug"
+              />
+              <FormControlLabel
+                control={
+                  <Switch
+                    name="get_notified"
+                    checked={newProduct.get_notified}
+                    onChange={handleBooleanChange}
+                  />
+                }
+                label="Get Notified"
+              />
+              <FormControlLabel
+                control={
+                  <Switch
+                    name="discount_offered"
+                    checked={newProduct.discount_offered}
+                    onChange={handleBooleanChange}
+                  />
+                }
+                label="Discount Offered"
+              />
+              <FormControlLabel
+                control={
+                  <Switch
+                    name="call_me_to_modify"
+                    checked={newProduct.call_me_to_modify}
+                    onChange={handleBooleanChange}
+                  />
+                }
+                label="Call Me to Modify"
+              />
+              <FormControlLabel
+                control={
+                  <Switch
+                    name="how_to_take_medicine"
+                    checked={newProduct.how_to_take_medicine}
+                    onChange={handleBooleanChange}
+                  />
+                }
+                label="How to Take Medicine"
+              />
+            </Grid>
           </Grid>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDialogState((prev) => ({ ...prev, open: false }))}>
             Cancel
           </Button>
-          <Button
-            onClick={handleCreateProduct}
-            color="error"
-            variant="contained"
-            disabled={
-              !newProduct.productName ||
-              !newProduct.mrp ||
-              !newProduct.sellingPrice ||
-              !newProduct.brand ||
-              !newProduct.categoryId ||
-              !newProduct.authorId
-            }
-          >
+          <Button onClick={handleCreateProduct} color="error" variant="contained">
             Create Product
           </Button>
         </DialogActions>
@@ -1271,6 +1510,9 @@ Products.propTypes = {
       category: PropTypes.string.isRequired,
       expireDate: PropTypes.string,
       isPrescriptionRequired: PropTypes.bool,
+      strength: PropTypes.string,
+      quantity: PropTypes.number,
+      stock: PropTypes.string,
     }).isRequired,
   }).isRequired,
 };
