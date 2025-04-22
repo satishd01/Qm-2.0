@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { useTheme } from "@mui/material/styles";
 import PropTypes from "prop-types";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
+import DeleteIcon from "@mui/icons-material/Delete";
+import EditIcon from "@mui/icons-material/Edit";
 import {
   Grid,
   Card,
@@ -25,6 +27,7 @@ import {
   Snackbar,
   Alert,
   OutlinedInput,
+  IconButton,
 } from "@mui/material";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
@@ -52,6 +55,22 @@ PrescriptionCell.propTypes = {
   value: PropTypes.bool.isRequired,
 };
 
+const ActionCell = ({ value, onEdit, onDelete }) => (
+  <Box>
+    <IconButton color="primary" onClick={() => onEdit(value)}>
+      <EditIcon />
+    </IconButton>
+    <IconButton color="error" onClick={() => onDelete(value)}>
+      <DeleteIcon />
+    </IconButton>
+  </Box>
+);
+ActionCell.propTypes = {
+  value: PropTypes.number.isRequired,
+  onEdit: PropTypes.func.isRequired,
+  onDelete: PropTypes.func.isRequired,
+};
+
 const generateSampleData = () => {
   return [
     {
@@ -59,7 +78,6 @@ const generateSampleData = () => {
       MRP: 999.99,
       "Selling Price": 399.99,
       Brand: "Sun Pharma",
-      // "Product Form": "Vitamin Tablet",
       Uses: "Uses",
       "Age Group": "Any",
       "Category ID": 1,
@@ -133,6 +151,13 @@ function Products() {
   const [dialogState, setDialogState] = useState({
     open: false,
     currentProduct: null,
+    isEdit: false,
+  });
+
+  const [deleteDialog, setDeleteDialog] = useState({
+    open: false,
+    productId: null,
+    productName: "",
   });
 
   const [authors, setAuthors] = useState([]);
@@ -186,11 +211,10 @@ function Products() {
     stock: "Available",
   });
 
-  const baseUrl = process.env.REACT_APP_BASE_URL || "https://quickmeds.sndktech.online ";
+  const baseUrl = process.env.REACT_APP_BASE_URL || "https://quickmeds.sndktech.online";
   const xAuthHeader =
     process.env.REACT_APP_X_AUTHORIZATION || "RGVlcGFrS3-VzaHdhaGE5Mzk5MzY5ODU0-QWxoblBvb2ph";
 
-  // Calculate selling price when MRP or discount changes
   useEffect(() => {
     if (newProduct.mrp && newProduct.discount_price_percentage) {
       const discountAmount = (newProduct.mrp * newProduct.discount_price_percentage) / 100;
@@ -570,6 +594,175 @@ function Products() {
     }
   };
 
+  const handleEditProduct = (productId) => {
+    const product = state.products.find((p) => p.id === productId);
+    if (product) {
+      setNewProduct({
+        ...product,
+        variants: product.variants || [],
+        images: product.images || [],
+      });
+      setState((prev) => ({
+        ...prev,
+        selectedMolecules: product.product_molecule_id || [],
+      }));
+      setDialogState({
+        open: true,
+        currentProduct: product,
+        isEdit: true,
+      });
+    }
+  };
+
+  const handleUpdateProduct = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      setState((prev) => ({ ...prev, loading: true }));
+
+      const productData = {
+        id: dialogState.currentProduct.id,
+        productName: newProduct.productName,
+        mrp: parseFloat(newProduct.mrp),
+        sellingPrice: parseFloat(newProduct.sellingPrice),
+        brand: newProduct.brand,
+        productForm: newProduct.productForm,
+        uses: newProduct.uses,
+        age: newProduct.age,
+        categoryId: parseInt(newProduct.categoryId),
+        category: newProduct.category,
+        manufacturer: newProduct.manufacturer,
+        consumeType: newProduct.consumeType,
+        expireDate: newProduct.expireDate,
+        packagingDetails: newProduct.packagingDetails,
+        stock: newProduct.stock,
+        images: newProduct.images,
+        variants: newProduct.variants,
+        composition: newProduct.composition,
+        productIntroduction: newProduct.productIntroduction,
+        usesOfMedication: newProduct.usesOfMedication,
+        benefits: newProduct.benefits,
+        contradictions: newProduct.contradictions,
+        isPrescriptionRequired: newProduct.isPrescriptionRequired,
+        expertAdvice: newProduct.expertAdvice,
+        substituteProducts: newProduct.substituteProducts,
+        authorId: parseInt(newProduct.authorId),
+        sub_category: newProduct.sub_category,
+        direction_to_use: newProduct.direction_to_use,
+        side_effects: newProduct.side_effects,
+        precautions_while_using: newProduct.precautions_while_using,
+        descriptions: newProduct.descriptions,
+        references: newProduct.references,
+        country_of_origin: newProduct.country_of_origin,
+        product_molecule_id: state.selectedMolecules,
+        schedule_x_drug: newProduct.schedule_x_drug,
+        get_notified: newProduct.get_notified,
+        weight: newProduct.weight,
+        discount_price_percentage: newProduct.discount_price_percentage,
+        discount_offered: newProduct.discount_offered,
+        pin_code: newProduct.pin_code,
+        call_me_to_modify: newProduct.call_me_to_modify,
+        how_to_take_medicine: newProduct.how_to_take_medicine,
+        specification: newProduct.specification,
+        strength: newProduct.strength,
+        quantity: parseInt(newProduct.quantity),
+      };
+
+      const response = await fetch(`${baseUrl}/product.updateByVendor`, {
+        method: "PUT",
+        headers: {
+          "x-authorization": xAuthHeader,
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(productData),
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data?.message || "Failed to update product");
+
+      setState((prev) => ({
+        ...prev,
+        snackbar: {
+          open: true,
+          message: "Product updated successfully!",
+          severity: "success",
+        },
+      }));
+
+      setDialogState((prev) => ({ ...prev, open: false }));
+      await fetchProducts();
+    } catch (error) {
+      console.error("Error updating product:", error);
+      setState((prev) => ({
+        ...prev,
+        snackbar: {
+          open: true,
+          message: error.message,
+          severity: "error",
+        },
+      }));
+    } finally {
+      setState((prev) => ({ ...prev, loading: false }));
+    }
+  };
+
+  const handleDeleteProduct = async () => {
+    try {
+      setState((prev) => ({ ...prev, loading: true }));
+      const token = localStorage.getItem("token");
+
+      const response = await fetch(`${baseUrl}/vendor/product.delete`, {
+        method: "DELETE",
+        headers: {
+          "x-authorization": xAuthHeader,
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          id: deleteDialog.productId,
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data?.message || "Failed to delete product");
+
+      setState((prev) => ({
+        ...prev,
+        snackbar: {
+          open: true,
+          message: "Product deleted successfully!",
+          severity: "success",
+        },
+      }));
+
+      setDeleteDialog((prev) => ({ ...prev, open: false }));
+      await fetchProducts();
+    } catch (error) {
+      console.error("Error deleting product:", error);
+      setState((prev) => ({
+        ...prev,
+        snackbar: {
+          open: true,
+          message: error.message,
+          severity: "error",
+        },
+      }));
+    } finally {
+      setState((prev) => ({ ...prev, loading: false }));
+    }
+  };
+
+  const handleOpenDeleteDialog = (productId) => {
+    const product = state.products.find((p) => p.id === productId);
+    if (product) {
+      setDeleteDialog({
+        open: true,
+        productId,
+        productName: product.productName,
+      });
+    }
+  };
+
   const handleCloseSnackbar = () => {
     setState((prev) => ({
       ...prev,
@@ -599,6 +792,13 @@ function Products() {
     { Header: "Strength", accessor: "strength" },
     { Header: "Quantity", accessor: "quantity" },
     { Header: "Stock", accessor: "stock" },
+    {
+      Header: "Actions",
+      accessor: "id",
+      Cell: ({ value }) => (
+        <ActionCell value={value} onEdit={handleEditProduct} onDelete={handleOpenDeleteDialog} />
+      ),
+    },
   ];
 
   const filteredProducts = state.products.filter((product) => {
@@ -917,7 +1117,9 @@ function Products() {
                     <Button
                       variant="contained"
                       color="error"
-                      onClick={() => setDialogState((prev) => ({ ...prev, open: true }))}
+                      onClick={() =>
+                        setDialogState({ open: true, currentProduct: null, isEdit: false })
+                      }
                     >
                       Add New Product
                     </Button>
@@ -982,7 +1184,7 @@ function Products() {
         maxWidth="md"
         scroll="paper"
       >
-        <DialogTitle>Add New Product</DialogTitle>
+        <DialogTitle>{dialogState.isEdit ? "Edit Product" : "Add New Product"}</DialogTitle>
         <DialogContent dividers>
           <Grid container spacing={2}>
             <Grid item xs={12} md={6}>
@@ -1051,22 +1253,6 @@ function Products() {
                 fullWidth
                 margin="normal"
               />
-              {/* <TextField
-                label="Product Form"
-                name="productForm"
-                value={newProduct.productForm}
-                onChange={handleInputChange}
-                fullWidth
-                margin="normal"
-              /> */}
-              {/* <TextField
-                label="Consume Type"
-                name="consumeType"
-                value={newProduct.consumeType}
-                onChange={handleInputChange}
-                fullWidth
-                margin="normal"
-              /> */}
               <TextField
                 label="Specification"
                 name="specification"
@@ -1216,13 +1402,6 @@ function Products() {
                 fullWidth
                 margin="normal"
               />
-              {/* <TextField
-                label="Substitute Products (comma separated)"
-                value={newProduct.substituteProducts.join(", ")}
-                onChange={(e) => handleArrayChange(e, "substituteProducts")}
-                fullWidth
-                margin="normal"
-              /> */}
               <TextField
                 label="Composition"
                 name="composition"
@@ -1356,17 +1535,17 @@ function Products() {
                 <InputLabel>Molecules</InputLabel>
                 <Select
                   multiple
-                  value={state.selectedMolecules}
+                  value={Array.isArray(state.selectedMolecules) ? state.selectedMolecules : []}
                   onChange={(e) =>
                     setState((prev) => ({
                       ...prev,
-                      selectedMolecules: e.target.value,
+                      selectedMolecules: Array.isArray(e.target.value) ? e.target.value : [],
                     }))
                   }
                   input={<OutlinedInput label="Molecules" />}
                   renderValue={(selected) => (
                     <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
-                      {selected.map((value) => {
+                      {(Array.isArray(selected) ? selected : []).map((value) => {
                         const molecule = state.molecules.find((m) => m.id === value);
                         return (
                           <Chip key={value} label={molecule ? molecule.molecule_name : value} />
@@ -1413,7 +1592,6 @@ function Products() {
                 >
                   <MenuItem value="Available">Available</MenuItem>
                   <MenuItem value="Out of Stock">Not Available</MenuItem>
-                  {/* <MenuItem value="Limited Stock">Limited Stock</MenuItem> */}
                 </Select>
               </FormControl>
             </Grid>
@@ -1476,8 +1654,32 @@ function Products() {
           <Button onClick={() => setDialogState((prev) => ({ ...prev, open: false }))}>
             Cancel
           </Button>
-          <Button onClick={handleCreateProduct} color="error" variant="contained">
-            Create Product
+          <Button
+            onClick={dialogState.isEdit ? handleUpdateProduct : handleCreateProduct}
+            color="error"
+            variant="contained"
+          >
+            {dialogState.isEdit ? "Update Product" : "Create Product"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={deleteDialog.open}
+        onClose={() => setDeleteDialog((prev) => ({ ...prev, open: false }))}
+      >
+        <DialogTitle>Confirm Delete</DialogTitle>
+        <DialogContent>
+          <MDTypography>
+            Are you sure you want to delete the product &quot;{deleteDialog.productName}&quot;?
+          </MDTypography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialog((prev) => ({ ...prev, open: false }))}>
+            Cancel
+          </Button>
+          <Button onClick={handleDeleteProduct} color="error" variant="contained">
+            Delete
           </Button>
         </DialogActions>
       </Dialog>
