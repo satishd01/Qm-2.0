@@ -59,7 +59,7 @@ const generateSampleData = () => {
       MRP: 999.99,
       "Selling Price": 399.99,
       Brand: "Sun Pharma",
-      "Product Form": "Vitamin Tablet",
+      // "Product Form": "Vitamin Tablet",
       Uses: "Uses",
       "Age Group": "Any",
       "Category ID": 1,
@@ -1051,22 +1051,22 @@ function Products() {
                 fullWidth
                 margin="normal"
               />
-              <TextField
+              {/* <TextField
                 label="Product Form"
                 name="productForm"
                 value={newProduct.productForm}
                 onChange={handleInputChange}
                 fullWidth
                 margin="normal"
-              />
-              <TextField
+              /> */}
+              {/* <TextField
                 label="Consume Type"
                 name="consumeType"
                 value={newProduct.consumeType}
                 onChange={handleInputChange}
                 fullWidth
                 margin="normal"
-              />
+              /> */}
               <TextField
                 label="Specification"
                 name="specification"
@@ -1216,13 +1216,13 @@ function Products() {
                 fullWidth
                 margin="normal"
               />
-              <TextField
+              {/* <TextField
                 label="Substitute Products (comma separated)"
                 value={newProduct.substituteProducts.join(", ")}
                 onChange={(e) => handleArrayChange(e, "substituteProducts")}
                 fullWidth
                 margin="normal"
-              />
+              /> */}
               <TextField
                 label="Composition"
                 name="composition"
