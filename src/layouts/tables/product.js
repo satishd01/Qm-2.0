@@ -1403,16 +1403,17 @@ function Products() {
                 margin="normal"
               />
               <FormControl fullWidth margin="normal">
-                <InputLabel>Stock Status</InputLabel>
+                <InputLabel>Available/not available</InputLabel>
                 <Select
                   name="stock"
                   value={newProduct.stock}
                   onChange={handleInputChange}
                   label="Stock Status"
+                  sx={{ width: 350, height: 40 }}
                 >
                   <MenuItem value="Available">Available</MenuItem>
-                  <MenuItem value="Out of Stock">Out of Stock</MenuItem>
-                  <MenuItem value="Limited Stock">Limited Stock</MenuItem>
+                  <MenuItem value="Out of Stock">Not Available</MenuItem>
+                  {/* <MenuItem value="Limited Stock">Limited Stock</MenuItem> */}
                 </Select>
               </FormControl>
             </Grid>
