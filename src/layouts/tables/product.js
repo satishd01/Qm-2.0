@@ -65,8 +65,9 @@ const ActionCell = ({ value, onEdit, onDelete }) => (
     </IconButton>
   </Box>
 );
+
 ActionCell.propTypes = {
-  value: PropTypes.number.isRequired,
+  value: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
   onEdit: PropTypes.func.isRequired,
   onDelete: PropTypes.func.isRequired,
 };
@@ -772,6 +773,12 @@ function Products() {
       },
     }));
   };
+  const ActionsCell = ({ value }) => (
+    <ActionCell value={value} onEdit={handleEditProduct} onDelete={handleOpenDeleteDialog} />
+  );
+  ActionsCell.propTypes = {
+    value: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+  };
 
   const columns = [
     { Header: "Product Name", accessor: "productName" },
@@ -795,11 +802,13 @@ function Products() {
     {
       Header: "Actions",
       accessor: "id",
-      Cell: ({ value }) => (
-        <ActionCell value={value} onEdit={handleEditProduct} onDelete={handleOpenDeleteDialog} />
-      ),
+      Cell: ActionsCell, // Use the component directly
     },
   ];
+
+  columns[columns.length - 1].Cell.propTypes = {
+    value: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+  };
 
   const filteredProducts = state.products.filter((product) => {
     const search = state.searchTerm.toLowerCase();
