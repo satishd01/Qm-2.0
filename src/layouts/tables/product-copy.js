@@ -162,8 +162,6 @@ function Products() {
   });
 
   const [authors, setAuthors] = useState([]);
-  const [commition, Setcommition] = useState([]);
-  console.log("commition", commition);
   const [uploading, setUploading] = useState(false);
 
   const [newProduct, setNewProduct] = useState({
@@ -212,7 +210,6 @@ function Products() {
     strength: "",
     quantity: 0,
     stock: "Available",
-    commission: "",
     compiled_by: "",
     reviewed_by: "",
   });
@@ -270,32 +267,6 @@ function Products() {
       const data = await response.json();
       if (data?.data) {
         setAuthors(data.data);
-      }
-    } catch (error) {
-      console.error("Error fetching authors:", error);
-      setState((prev) => ({
-        ...prev,
-        snackbar: {
-          open: true,
-          message: "Failed to load authors",
-          severity: "error",
-        },
-      }));
-    }
-  }, [baseUrl, xAuthHeader]);
-
-  const fetchCommition = useCallback(async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`${baseUrl}/commission.get`, {
-        headers: {
-          "x-authorization": xAuthHeader,
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      const data = await response.json();
-      if (data) {
-        Setcommition(data.commissions);
       }
     } catch (error) {
       console.error("Error fetching authors:", error);
@@ -379,7 +350,6 @@ function Products() {
   useEffect(() => {
     fetchCategories();
     fetchAuthors();
-    fetchCommition();
     fetchMolecules();
   }, [fetchCategories, fetchAuthors, fetchMolecules]);
 
@@ -537,9 +507,6 @@ function Products() {
         specification: newProduct.specification,
         strength: newProduct.strength,
         quantity: parseInt(newProduct.quantity),
-        commission: newProduct.commission,
-        compiled_by: newProduct.compiled_by,
-        reviewed_by: newProduct.reviewed_by,
       };
 
       const response = await fetch(`${baseUrl}/product.add`, {
@@ -1288,22 +1255,7 @@ function Products() {
                   ))}
                 </Select>
               </FormControl>
-              <FormControl fullWidth margin="normal">
-                <InputLabel>Commition *</InputLabel>
-                <Select
-                  name="commission"
-                  value={newProduct.commission}
-                  onChange={handleInputChange}
-                  label="Commition *"
-                  sx={{ width: 350, height: 40 }}
-                >
-                  {commition.map((commission) => (
-                    <MenuItem key={commission.id} value={commission.id}>
-                      {commission.type} — {commission.commission}%
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+
               <TextField
                 label="Manufacturer"
                 name="manufacturer"
@@ -1654,14 +1606,15 @@ function Products() {
                 </Select>
               </FormControl>
             </Grid>
+
             <Grid item xs={12} md={6}>
               <FormControl fullWidth margin="normal">
-                <InputLabel>Compiled By</InputLabel>
+                <InputLabel>Compailed By</InputLabel>
                 <Select
-                  name="compiled_by"
+                  name="Compiled By"
                   value={newProduct.compiled_by}
                   onChange={handleInputChange}
-                  label="Compiled By"
+                  label="Compailed By *"
                   sx={{ width: 350, height: 40 }}
                 >
                   {authors.map((author) => (
@@ -1676,10 +1629,10 @@ function Products() {
               <FormControl fullWidth margin="normal">
                 <InputLabel>Reviewed By</InputLabel>
                 <Select
-                  name="reviewed_by"
+                  name="Reviewed By"
                   value={newProduct.reviewed_by}
                   onChange={handleInputChange}
-                  label="Reviewed By"
+                  label="Reviewed By *"
                   sx={{ width: 350, height: 40 }}
                 >
                   {authors.map((author) => (

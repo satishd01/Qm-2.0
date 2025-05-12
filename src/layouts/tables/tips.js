@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import { useTheme } from "@mui/material/styles";
 import PropTypes from "prop-types";
 import Grid from "@mui/material/Grid";
 import Card from "@mui/material/Card";
@@ -20,28 +19,29 @@ import MuiAlert from "@mui/material/Alert";
 import IconButton from "@mui/material/IconButton";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
-import ReactQuill from "react-quill";
-import "react-quill/dist/quill.snow.css";
+import MenuItem from "@mui/material/MenuItem";
+import Select from "@mui/material/Select";
 import InputLabel from "@mui/material/InputLabel";
 
 const Alert = React.forwardRef(function Alert(props, ref) {
   return <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />;
 });
 
-function Policies() {
-  const theme = useTheme();
-  const [policies, setPolicies] = useState([]);
+function Tips() {
+  const [tips, setTips] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [policyType, setPolicyType] = useState("");
   const [open, setOpen] = useState(false);
   const [openEdit, setOpenEdit] = useState(false);
   const [openDelete, setOpenDelete] = useState(false);
-  const [newPolicy, setNewPolicy] = useState({
-    policyType: "",
-    description: "",
+  const [newTip, setNewTip] = useState({
+    type: "",
+    deliveryType: "",
+    amount: 0,
   });
-  const [editPolicy, setEditPolicy] = useState(null);
-  const [deletePolicy, setDeletePolicy] = useState(null);
+  const [editTip, setEditTip] = useState(null);
+  const [deleteTip, setDeleteTip] = useState(null);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
@@ -50,7 +50,11 @@ function Policies() {
 
   const baseUrl = process.env.REACT_APP_BASE_URL || "https://quickmeds.sndktech.online";
 
-  const fetchPolicies = async () => {
+  // Options for dropdowns based on API response
+  const typeOptions = ["Medicine Vendor", "Lab Vendor"];
+  const deliveryTypeOptions = ["Medicine Delivery Boy", "Lab Delivery Boy"];
+
+  const fetchTips = async () => {
     try {
       const token = localStorage.getItem("token");
       if (!token) {
@@ -58,12 +62,7 @@ function Policies() {
         return;
       }
 
-      let url = `${baseUrl}/policy`;
-      if (policyType) {
-        url += `?policyType=${encodeURIComponent(policyType)}`;
-      }
-
-      const response = await fetch(url, {
+      const response = await fetch(`${baseUrl}/tips`, {
         headers: {
           "x-authorization": "RGVlcGFrS3-VzaHdhaGE5Mzk5MzY5ODU0-QWxoblBvb2ph",
           Authorization: `Bearer ${token}`,
@@ -72,16 +71,17 @@ function Policies() {
 
       const data = await response.json();
 
-      if (data.status && data.policies) {
-        setPolicies(data.policies);
+      if (data.status && data.tips) {
+        setTips(data.tips);
+        setTotalPages(data.totalPages);
       } else {
-        console.error("No policies data found in the response.");
+        console.error("No tips data found in the response.");
       }
     } catch (error) {
-      console.error("Error fetching policies data:", error);
+      console.error("Error fetching tips data:", error);
       setSnackbar({
         open: true,
-        message: "Failed to fetch policies",
+        message: "Failed to fetch tips",
         severity: "error",
       });
     } finally {
@@ -89,27 +89,32 @@ function Policies() {
     }
   };
 
+  useEffect(() => {
+    fetchTips();
+  }, [page]);
+
   const handleOpen = () => setOpen(true);
   const handleClose = () => {
     setOpen(false);
-    setNewPolicy({
-      policyType: "",
-      description: "",
+    setNewTip({
+      type: "",
+      deliveryType: "",
+      amount: 0,
     });
   };
 
-  const handleOpenEdit = (policy) => {
-    setEditPolicy(policy);
+  const handleOpenEdit = (tip) => {
+    setEditTip(tip);
     setOpenEdit(true);
   };
 
   const handleCloseEdit = () => {
     setOpenEdit(false);
-    setEditPolicy(null);
+    setEditTip(null);
   };
 
-  const handleOpenDelete = (policy) => {
-    setDeletePolicy(policy);
+  const handleOpenDelete = (tip) => {
+    setDeleteTip(tip);
     setOpenDelete(true);
   };
 
@@ -117,27 +122,21 @@ function Policies() {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setNewPolicy({
-      ...newPolicy,
+    setNewTip({
+      ...newTip,
       [name]: value,
     });
   };
 
-  const handleDescriptionChange = (value) => {
-    setNewPolicy({
-      ...newPolicy,
-      description: value,
+  const handleEditInputChange = (e) => {
+    const { name, value } = e.target;
+    setEditTip({
+      ...editTip,
+      [name]: value,
     });
   };
 
-  const handleEditDescriptionChange = (value) => {
-    setEditPolicy({
-      ...editPolicy,
-      description: value,
-    });
-  };
-
-  const handleCreatePolicy = async () => {
+  const handleCreateTip = async () => {
     try {
       const token = localStorage.getItem("token");
       setLoading(true);
@@ -147,14 +146,14 @@ function Policies() {
         return;
       }
 
-      const response = await fetch(`${baseUrl}/policy`, {
+      const response = await fetch(`${baseUrl}/tips`, {
         method: "POST",
         headers: {
           "x-authorization": "RGVlcGFrS3-VzaHdhaGE5Mzk5MzY5ODU0-QWxoblBvb2ph",
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(newPolicy),
+        body: JSON.stringify(newTip),
       });
 
       const data = await response.json();
@@ -162,23 +161,23 @@ function Policies() {
       if (response.ok) {
         setSnackbar({
           open: true,
-          message: data.message || "Policy created successfully!",
+          message: data.message || "Tip created successfully!",
           severity: "success",
         });
         handleClose();
-        fetchPolicies();
+        fetchTips();
       } else {
         setSnackbar({
           open: true,
-          message: data.message || "Failed to create policy",
+          message: data.message || "Failed to create tip",
           severity: "error",
         });
       }
     } catch (error) {
-      console.error("Error creating policy:", error);
+      console.error("Error creating tip:", error);
       setSnackbar({
         open: true,
-        message: "Error creating policy. Please try again.",
+        message: "Error creating tip. Please try again.",
         severity: "error",
       });
     } finally {
@@ -186,17 +185,17 @@ function Policies() {
     }
   };
 
-  const handleUpdatePolicy = async () => {
+  const handleUpdateTip = async () => {
     try {
       const token = localStorage.getItem("token");
       setLoading(true);
 
-      if (!token || !editPolicy) {
-        console.error("No token found or no policy selected for update");
+      if (!token || !editTip) {
+        console.error("No token found or no tip selected for update");
         return;
       }
 
-      const response = await fetch(`${baseUrl}/policy/${editPolicy.id}`, {
+      const response = await fetch(`${baseUrl}/tips/${editTip.id}`, {
         method: "PUT",
         headers: {
           "x-authorization": "RGVlcGFrS3-VzaHdhaGE5Mzk5MzY5ODU0-QWxoblBvb2ph",
@@ -204,7 +203,9 @@ function Policies() {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          description: editPolicy.description,
+          type: editTip.type,
+          deliveryType: editTip.deliveryType,
+          amount: editTip.amount,
         }),
       });
 
@@ -213,23 +214,23 @@ function Policies() {
       if (response.ok) {
         setSnackbar({
           open: true,
-          message: data.message || "Policy updated successfully!",
+          message: data.message || "Tip updated successfully!",
           severity: "success",
         });
         handleCloseEdit();
-        fetchPolicies();
+        fetchTips();
       } else {
         setSnackbar({
           open: true,
-          message: data.message || "Failed to update policy",
+          message: data.message || "Failed to update tip",
           severity: "error",
         });
       }
     } catch (error) {
-      console.error("Error updating policy:", error);
+      console.error("Error updating tip:", error);
       setSnackbar({
         open: true,
-        message: "Error updating policy. Please try again.",
+        message: "Error updating tip. Please try again.",
         severity: "error",
       });
     } finally {
@@ -237,17 +238,17 @@ function Policies() {
     }
   };
 
-  const handleDeletePolicy = async () => {
+  const handleDeleteTip = async () => {
     try {
       const token = localStorage.getItem("token");
       setLoading(true);
 
-      if (!token || !deletePolicy) {
-        console.error("No token found or no policy selected for deletion");
+      if (!token || !deleteTip) {
+        console.error("No token found or no tip selected for deletion");
         return;
       }
 
-      const response = await fetch(`${baseUrl}/policy/${deletePolicy.id}`, {
+      const response = await fetch(`${baseUrl}/tips/${deleteTip.id}`, {
         method: "DELETE",
         headers: {
           "x-authorization": "RGVlcGFrS3-VzaHdhaGE5Mzk5MzY5ODU0-QWxoblBvb2ph",
@@ -260,23 +261,23 @@ function Policies() {
       if (response.ok) {
         setSnackbar({
           open: true,
-          message: data.message || "Policy deleted successfully!",
+          message: data.message || "Tip deleted successfully!",
           severity: "success",
         });
         handleCloseDelete();
-        fetchPolicies();
+        fetchTips();
       } else {
         setSnackbar({
           open: true,
-          message: data.message || "Failed to delete policy",
+          message: data.message || "Failed to delete tip",
           severity: "error",
         });
       }
     } catch (error) {
-      console.error("Error deleting policy:", error);
+      console.error("Error deleting tip:", error);
       setSnackbar({
         open: true,
-        message: "Error deleting policy. Please try again.",
+        message: "Error deleting tip. Please try again.",
         severity: "error",
       });
     } finally {
@@ -284,25 +285,17 @@ function Policies() {
     }
   };
 
-  useEffect(() => {
-    fetchPolicies();
-  }, [policyType]);
-
   const columns = [
     { Header: "ID", accessor: "id" },
-    // { Header: "Policy Type", accessor: "policyType" },
+    { Header: "Type", accessor: "type" },
+    { Header: "Delivery Type", accessor: "deliveryType" },
     {
-      Header: "Description",
-      accessor: "description",
-      Cell: ({ value }) => (
-        <div
-          dangerouslySetInnerHTML={{ __html: value }}
-          style={{ maxHeight: "100px", overflow: "hidden" }}
-        />
-      ),
+      Header: "Amount",
+      accessor: "amount",
+      Cell: ({ value }) => `${value}`,
     },
     { Header: "Created At", accessor: "createdAt" },
-    // { Header: "Updated At", accessor: "updatedAt" },
+    { Header: "Updated At", accessor: "updatedAt" },
     {
       Header: "Actions",
       accessor: "actions",
@@ -318,18 +311,6 @@ function Policies() {
       ),
     },
   ];
-
-  const modules = {
-    toolbar: [
-      [{ header: [1, 2, 3, false] }],
-      ["bold", "italic", "underline", "strike"],
-      [{ list: "ordered" }, { list: "bullet" }],
-      ["link"],
-      ["clean"],
-    ],
-  };
-
-  const formats = ["header", "bold", "italic", "underline", "strike", "list", "bullet", "link"];
 
   return (
     <DashboardLayout>
@@ -355,36 +336,25 @@ function Policies() {
                   flexWrap="wrap"
                 >
                   <MDTypography variant="h6" color="black">
-                    Policies
+                    Tips Table
                   </MDTypography>
-                  <MDBox display="flex" gap={2} flexWrap="wrap">
-                    <TextField
-                      label="Search by Policy Type"
-                      type="text"
-                      fullWidth
-                      value={policyType}
-                      onChange={(e) => setPolicyType(e.target.value)}
-                      sx={{
-                        mr: 2,
-                        width: { xs: "100%", sm: 200 },
-                        [theme.breakpoints.down("sm")]: {
-                          marginBottom: 2,
-                        },
-                      }}
-                    />
-                    <Button variant="contained" color="error" onClick={handleOpen}>
-                      Create Policy
-                    </Button>
-                  </MDBox>
+                  <Button variant="contained" color="error" onClick={handleOpen}>
+                    Add New Tip
+                  </Button>
                 </MDBox>
               </MDBox>
               <MDBox pt={3}>
                 <DataTable
-                  table={{ columns, rows: policies }}
+                  table={{ columns, rows: tips }}
                   isSorted={false}
                   entriesPerPage={false}
                   showTotalEntries={false}
                   noEndBorder
+                  pagination={{
+                    page,
+                    totalPages,
+                    onChange: (newPage) => setPage(newPage),
+                  }}
                 />
               </MDBox>
             </Card>
@@ -393,60 +363,129 @@ function Policies() {
       </MDBox>
       <Footer />
 
-      {/* Create Policy Dialog */}
-      <Dialog open={open} onClose={handleClose} fullWidth maxWidth="md">
-        <DialogTitle>Create New Policy</DialogTitle>
+      {/* Add New Tip Dialog */}
+      <Dialog open={open} onClose={handleClose} fullWidth maxWidth="sm">
+        <DialogTitle>Add New Tip</DialogTitle>
         <DialogContent>
-          <TextField
-            autoFocus
-            margin="dense"
-            id="policyType"
-            label="Policy Type"
-            type="text"
+          <InputLabel id="type-label" sx={{ mt: 1 }} width>
+            Type
+          </InputLabel>
+          <Select
+            labelId="type-label"
+            id="type"
             fullWidth
             variant="standard"
-            value={newPolicy.policyType}
+            value={newTip.type}
             onChange={handleInputChange}
-            name="policyType"
-            sx={{ mb: 3 }}
-          />
-          <InputLabel>Description</InputLabel>
-          <ReactQuill
-            theme="snow"
-            value={newPolicy.description}
-            onChange={handleDescriptionChange}
-            modules={modules}
-            formats={formats}
-            style={{ height: "200px", marginBottom: "50px" }}
+            name="type"
+            sx={{ mb: 2 }}
+          >
+            <MenuItem value="">
+              <em>Select Type</em>
+            </MenuItem>
+            {typeOptions.map((option) => (
+              <MenuItem key={option} value={option}>
+                {option}
+              </MenuItem>
+            ))}
+          </Select>
+
+          <InputLabel id="delivery-type-label">Delivery Type</InputLabel>
+          <Select
+            labelId="delivery-type-label"
+            id="deliveryType"
+            fullWidth
+            variant="standard"
+            value={newTip.deliveryType}
+            onChange={handleInputChange}
+            name="deliveryType"
+            sx={{ mb: 2 }}
+          >
+            <MenuItem value="">
+              <em>Select Delivery Type</em>
+            </MenuItem>
+            {deliveryTypeOptions.map((option) => (
+              <MenuItem key={option} value={option}>
+                {option}
+              </MenuItem>
+            ))}
+          </Select>
+
+          <TextField
+            margin="dense"
+            id="amount"
+            label="Amount"
+            type="number"
+            fullWidth
+            variant="standard"
+            value={newTip.amount}
+            onChange={handleInputChange}
+            name="amount"
           />
         </DialogContent>
         <DialogActions>
           <Button onClick={handleClose}>Cancel</Button>
-          <Button onClick={handleCreatePolicy}>Create</Button>
+          <Button onClick={handleCreateTip}>Create</Button>
         </DialogActions>
       </Dialog>
 
-      {/* Edit Policy Dialog */}
-      <Dialog open={openEdit} onClose={handleCloseEdit} fullWidth maxWidth="md">
-        <DialogTitle>Edit Policy</DialogTitle>
+      {/* Edit Tip Dialog */}
+      <Dialog open={openEdit} onClose={handleCloseEdit} fullWidth maxWidth="sm">
+        <DialogTitle>Edit Tip</DialogTitle>
         <DialogContent>
-          <MDBox mb={2}>
-            <MDTypography variant="h6">Policy Type:</MDTypography>
-            <MDTypography>{editPolicy?.policyType}</MDTypography>
-          </MDBox>
-          <InputLabel>Description</InputLabel>
-          <ReactQuill
-            theme="snow"
-            value={editPolicy?.description || ""}
-            onChange={handleEditDescriptionChange}
-            modules={modules}
-            formats={formats}
-            style={{ height: "200px", marginBottom: "50px" }}
+          <InputLabel id="edit-type-label" sx={{ mt: 1 }}>
+            Type
+          </InputLabel>
+          <Select
+            labelId="edit-type-label"
+            id="edit-type"
+            fullWidth
+            variant="standard"
+            value={editTip?.type || ""}
+            onChange={handleEditInputChange}
+            name="type"
+            sx={{ mb: 2 }}
+          >
+            {typeOptions.map((option) => (
+              <MenuItem key={option} value={option}>
+                {option}
+              </MenuItem>
+            ))}
+          </Select>
+
+          <InputLabel id="edit-delivery-type-label">Delivery Type</InputLabel>
+          <Select
+            labelId="edit-delivery-type-label"
+            id="edit-deliveryType"
+            fullWidth
+            variant="standard"
+            value={editTip?.deliveryType || ""}
+            onChange={handleEditInputChange}
+            name="deliveryType"
+            sx={{ mb: 2 }}
+          >
+            {deliveryTypeOptions.map((option) => (
+              <MenuItem key={option} value={option}>
+                {option}
+              </MenuItem>
+            ))}
+          </Select>
+
+          <TextField
+            margin="dense"
+            id="edit-amount"
+            label="Amount ($)"
+            type="number"
+            fullWidth
+            variant="standard"
+            value={editTip?.amount || 0}
+            onChange={handleEditInputChange}
+            name="amount"
           />
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseEdit}>Cancel</Button>
-          <Button onClick={handleUpdatePolicy}>Update</Button>
+          <Button onClick={handleUpdateTip}>Update</Button>
         </DialogActions>
       </Dialog>
 
@@ -454,28 +493,20 @@ function Policies() {
       <Dialog open={openDelete} onClose={handleCloseDelete}>
         <DialogTitle>Confirm Delete</DialogTitle>
         <DialogContent>
+          <MDTypography>Are you sure you want to delete this tip configuration?</MDTypography>
           <MDTypography>
-            Are you sure you want to delete this policy: <strong>{deletePolicy?.policyType}</strong>
-            ?
+            <strong>Type:</strong> {deleteTip?.type}
           </MDTypography>
-          <MDTypography mt={2}>
-            <strong>Description:</strong>
+          <MDTypography>
+            <strong>Delivery Type:</strong> {deleteTip?.deliveryType}
           </MDTypography>
-          <div
-            dangerouslySetInnerHTML={{ __html: deletePolicy?.description || "" }}
-            style={{
-              maxHeight: "200px",
-              overflow: "auto",
-              border: "1px solid #eee",
-              padding: "10px",
-              borderRadius: "4px",
-              marginTop: "10px",
-            }}
-          />
+          <MDTypography>
+            <strong>Amount:</strong> ${deleteTip?.amount}
+          </MDTypography>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDelete}>Cancel</Button>
-          <Button onClick={handleDeletePolicy} color="error" variant="contained">
+          <Button onClick={handleDeleteTip} color="error" variant="contained">
             Delete
           </Button>
         </DialogActions>
@@ -499,12 +530,13 @@ function Policies() {
   );
 }
 
-Policies.propTypes = {
+Tips.propTypes = {
   row: PropTypes.shape({
     original: PropTypes.shape({
       id: PropTypes.number.isRequired,
-      policyType: PropTypes.string.isRequired,
-      description: PropTypes.string.isRequired,
+      type: PropTypes.string.isRequired,
+      deliveryType: PropTypes.string.isRequired,
+      amount: PropTypes.number.isRequired,
       createdAt: PropTypes.string.isRequired,
       updatedAt: PropTypes.string.isRequired,
     }).isRequired,
@@ -512,4 +544,4 @@ Policies.propTypes = {
   value: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
 };
 
-export default Policies;
+export default Tips;

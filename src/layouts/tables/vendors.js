@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "@mui/material/styles";
 import PropTypes from "prop-types";
@@ -21,6 +21,16 @@ import MenuItem from "@mui/material/MenuItem";
 import Select from "@mui/material/Select";
 import FormControl from "@mui/material/FormControl";
 import InputLabel from "@mui/material/InputLabel";
+import { keyframes } from "@emotion/react";
+
+// Blinking animation
+const blink = keyframes`
+  0% { background-color: rgba(223, 16, 130, 0.1); }
+  50% { background-color: rgba(235, 39, 9, 0.3); }
+  100% { background-color: rgba(246, 61, 0, 0.1); }
+`;
+
+const blinkAnimation = `${blink} 1s ease-in-out 3`;
 
 function Vendors() {
   const navigate = useNavigate();
@@ -40,12 +50,21 @@ function Vendors() {
   const [pageSize, setPageSize] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
   const [selectedVendorType, setSelectedVendorType] = useState("Medicine Vendor");
+
+  // Store vendor counts and blinking state
   const [vendorCounts, setVendorCounts] = useState({
     medicine: 0,
     lab: 0,
   });
+  const [blinkingCard, setBlinkingCard] = useState(null);
+  const prevCountsRef = useRef({ medicine: 0, lab: 0 });
+  console.log("Previous Counts:", prevCountsRef.current);
+  const pollingIntervalRef = useRef(null);
+  const blinkTimeoutRef = useRef(null);
 
   const baseUrl = process.env.REACT_APP_BASE_URL || "https://quickmeds.sndktech.online";
+  const xAuthHeader =
+    process.env.REACT_APP_X_AUTHORIZATION || "RGVlcGFrS3-VzaHdhaGE5Mzk5MzY5ODU0-QWxoblBvb2ph";
 
   const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);
@@ -59,13 +78,13 @@ function Vendors() {
       const [medicineRes, labRes] = await Promise.all([
         fetch(`${baseUrl}/vendor.get1?vendor_type=Medicine Vendor&page=1&page_size=1`, {
           headers: {
-            "x-authorization": "RGVlcGFrS3-VzaHdhaGE5Mzk5MzY5ODU0-QWxoblBvb2ph",
+            "x-authorization": xAuthHeader,
             Authorization: `Bearer ${token}`,
           },
         }),
         fetch(`${baseUrl}/vendor.get1?vendor_type=Lab Vendor&page=1&page_size=1`, {
           headers: {
-            "x-authorization": "RGVlcGFrS3-VzaHdhaGE5Mzk5MzY5ODU0-QWxoblBvb2ph",
+            "x-authorization": xAuthHeader,
             Authorization: `Bearer ${token}`,
           },
         }),
@@ -74,18 +93,81 @@ function Vendors() {
       const medicineData = await medicineRes.json();
       const labData = await labRes.json();
 
-      setVendorCounts({
-        medicine: medicineData.total || 0,
-        lab: labData.total || 0,
+      const newMedicineCount = medicineData.total || 0;
+      const newLabCount = labData.total || 0;
+      console.log("Medicine Count:", newMedicineCount);
+      console.log("Lab Count:", newLabCount);
+
+      setVendorCounts((prev) => {
+        const newCounts = {
+          medicine: newMedicineCount,
+          lab: newLabCount,
+        };
+
+        // Check for count increases
+        if (newLabCount > prevCountsRef.current.lab) {
+          triggerBlink("lab");
+        }
+
+        if (newMedicineCount > prevCountsRef.current.medicine) {
+          triggerBlink("medicine");
+        }
+
+        // Update previous counts
+        prevCountsRef.current = newCounts;
+
+        return newCounts;
       });
     } catch (error) {
       console.error("Error fetching vendor counts:", error);
     }
   };
 
+  // Trigger blinking effect for a specific card
+  const triggerBlink = (cardType) => {
+    // Only set blinking if not already blinking
+    if (blinkingCard !== cardType) {
+      setBlinkingCard(cardType);
+      // Clear any existing timeout to avoid multiple blinks
+      if (blinkTimeoutRef.current) {
+        clearTimeout(blinkTimeoutRef.current);
+      }
+      blinkTimeoutRef.current = setTimeout(() => {
+        setBlinkingCard(null);
+      }, 3000); // Blink for 3 seconds
+    }
+  };
+
+  // Add cleanup for timeout when component unmounts
+  useEffect(() => {
+    return () => {
+      if (blinkTimeoutRef.current) {
+        clearTimeout(blinkTimeoutRef.current);
+      }
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+    };
+  }, []);
+
+  // Setup polling for vendor counts
+  const startPolling = () => {
+    // Clear any existing interval
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+    }
+
+    // Initial fetch
+    fetchVendorCounts();
+
+    // Set up polling every 10 seconds
+    pollingIntervalRef.current = setInterval(fetchVendorCounts, 10000);
+  };
+
   // Fetch vendors based on selected type
   const fetchVendors = async () => {
     try {
+      setLoading(true);
       const token = localStorage.getItem("token");
       if (!token) {
         console.error("No token found, please login again");
@@ -97,18 +179,16 @@ function Vendors() {
         `${baseUrl}/vendor.get1?vendor_type=${encodedVendorType}&page=${currentPage}&page_size=${pageSize}&search=${searchTerm}`,
         {
           headers: {
-            "x-authorization": "RGVlcGFrS3-VzaHdhaGE5Mzk5MzY5ODU0-QWxoblBvb2ph",
+            "x-authorization": xAuthHeader,
             Authorization: `Bearer ${token}`,
           },
         }
       );
 
       const data = await response.json();
-      if (data && data.vendors) {
+      if (data?.vendors) {
         setVendors(data.vendors);
         setTotalPages(data.totalPages || 1);
-      } else {
-        console.error("No vendor data found in the response.");
       }
     } catch (error) {
       console.error("Error fetching vendor data:", error);
@@ -118,7 +198,12 @@ function Vendors() {
   };
 
   useEffect(() => {
-    fetchVendorCounts();
+    startPolling();
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -138,7 +223,7 @@ function Vendors() {
       const response = await fetch(`${baseUrl}/vendor.add`, {
         method: "POST",
         headers: {
-          "x-authorization": "RGVlcGFrS3-VzaHdhaGE5Mzk5MzY5ODU0-QWxoblBvb2ph",
+          "x-authorization": xAuthHeader,
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
@@ -151,8 +236,6 @@ function Vendors() {
         window.alert("Vendor created successfully!");
         handleClose();
         setCurrentPage(1);
-        await fetchVendors();
-        await fetchVendorCounts();
         setNewVendor({
           phoneNumber: "",
           deviceToken: "",
@@ -160,6 +243,9 @@ function Vendors() {
           email: "",
           vendor_type: "Medicine Vendor",
         });
+        // Force refresh counts and vendors
+        await fetchVendorCounts();
+        await fetchVendors();
       } else {
         window.alert("Error: " + (data.message || "Failed to create vendor"));
       }
@@ -212,7 +298,10 @@ function Vendors() {
           <Grid item xs={12} md={6}>
             <Card
               onClick={() => setSelectedVendorType("Medicine Vendor")}
-              sx={{ cursor: "pointer" }}
+              sx={{
+                cursor: "pointer",
+                animation: blinkingCard === "medicine" ? blinkAnimation : "none",
+              }}
             >
               <MDBox p={3} display="flex" justifyContent="space-between" alignItems="center">
                 <MDTypography variant="h6">Medicine Vendors</MDTypography>
@@ -223,7 +312,13 @@ function Vendors() {
             </Card>
           </Grid>
           <Grid item xs={12} md={6}>
-            <Card onClick={() => setSelectedVendorType("Lab Vendor")} sx={{ cursor: "pointer" }}>
+            <Card
+              onClick={() => setSelectedVendorType("Lab Vendor")}
+              sx={{
+                cursor: "pointer",
+                animation: blinkingCard === "lab" ? blinkAnimation : "none",
+              }}
+            >
               <MDBox p={3} display="flex" justifyContent="space-between" alignItems="center">
                 <MDTypography variant="h6">Lab Vendors</MDTypography>
                 <MDTypography variant="h4" color="primary">
@@ -256,22 +351,6 @@ function Vendors() {
                     {selectedVendorType === "Medicine Vendor" ? "Medicine" : "Lab"} Vendors
                   </MDTypography>
                   <MDBox display="flex" gap={2} flexWrap="wrap" alignItems="center">
-                    {/* <FormControl sx={{ minWidth: 200 }} size="small">
-                      <InputLabel>Page Size</InputLabel>
-                      <Select
-                        value={pageSize}
-                        label="Page Size"
-                        onChange={(e) => {
-                          setPageSize(e.target.value);
-                          setCurrentPage(1);
-                        }}
-                      >
-                        <MenuItem value={5}>5 per page</MenuItem>
-                        <MenuItem value={10}>10 per page</MenuItem>
-                        <MenuItem value={25}>25 per page</MenuItem>
-                        <MenuItem value={50}>50 per page</MenuItem>
-                      </Select>
-                    </FormControl> */}
                     <TextField
                       label="Search by Vendor Name or Email"
                       type="text"
@@ -343,7 +422,7 @@ function Vendors() {
             onChange={(e) => setNewVendor({ ...newVendor, email: e.target.value })}
             sx={{ mt: 1 }}
           />
-          <TextField
+          {/* <TextField
             margin="dense"
             label="Device Token"
             type="text"
@@ -352,7 +431,7 @@ function Vendors() {
             value={newVendor.deviceToken}
             onChange={(e) => setNewVendor({ ...newVendor, deviceToken: e.target.value })}
             sx={{ mt: 1 }}
-          />
+          /> */}
           <FormControl fullWidth sx={{ mt: 1 }}>
             <InputLabel>Vendor Type</InputLabel>
             <Select

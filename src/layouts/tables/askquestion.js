@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import { useTheme } from "@mui/material/styles";
 import PropTypes from "prop-types";
 import Grid from "@mui/material/Grid";
 import Card from "@mui/material/Card";
@@ -20,28 +19,28 @@ import MuiAlert from "@mui/material/Alert";
 import IconButton from "@mui/material/IconButton";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
-import ReactQuill from "react-quill";
-import "react-quill/dist/quill.snow.css";
-import InputLabel from "@mui/material/InputLabel";
+import ReplyIcon from "@mui/icons-material/Reply";
 
 const Alert = React.forwardRef(function Alert(props, ref) {
   return <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />;
 });
 
-function Policies() {
-  const theme = useTheme();
-  const [policies, setPolicies] = useState([]);
+function AskQuestions() {
+  const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [policyType, setPolicyType] = useState("");
   const [open, setOpen] = useState(false);
-  const [openEdit, setOpenEdit] = useState(false);
+  const [openReply, setOpenReply] = useState(false);
   const [openDelete, setOpenDelete] = useState(false);
-  const [newPolicy, setNewPolicy] = useState({
-    policyType: "",
-    description: "",
+  const [newQuestion, setNewQuestion] = useState({
+    question: "",
   });
-  const [editPolicy, setEditPolicy] = useState(null);
-  const [deletePolicy, setDeletePolicy] = useState(null);
+  const [replyData, setReplyData] = useState({
+    id: null,
+    answer: "",
+  });
+  const [deleteQuestion, setDeleteQuestion] = useState(null);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
@@ -50,7 +49,7 @@ function Policies() {
 
   const baseUrl = process.env.REACT_APP_BASE_URL || "https://quickmeds.sndktech.online";
 
-  const fetchPolicies = async () => {
+  const fetchQuestions = async () => {
     try {
       const token = localStorage.getItem("token");
       if (!token) {
@@ -58,12 +57,7 @@ function Policies() {
         return;
       }
 
-      let url = `${baseUrl}/policy`;
-      if (policyType) {
-        url += `?policyType=${encodeURIComponent(policyType)}`;
-      }
-
-      const response = await fetch(url, {
+      const response = await fetch(`${baseUrl}/askedQuestion.getAll?page=${page}&limit=10`, {
         headers: {
           "x-authorization": "RGVlcGFrS3-VzaHdhaGE5Mzk5MzY5ODU0-QWxoblBvb2ph",
           Authorization: `Bearer ${token}`,
@@ -72,16 +66,17 @@ function Policies() {
 
       const data = await response.json();
 
-      if (data.status && data.policies) {
-        setPolicies(data.policies);
+      if (data.status && data.askedQuestions) {
+        setQuestions(data.askedQuestions);
+        setTotalPages(data.totalPages);
       } else {
-        console.error("No policies data found in the response.");
+        console.error("No questions data found in the response.");
       }
     } catch (error) {
-      console.error("Error fetching policies data:", error);
+      console.error("Error fetching questions data:", error);
       setSnackbar({
         open: true,
-        message: "Failed to fetch policies",
+        message: "Failed to fetch questions",
         severity: "error",
       });
     } finally {
@@ -89,27 +84,31 @@ function Policies() {
     }
   };
 
+  useEffect(() => {
+    fetchQuestions();
+  }, [page]);
+
   const handleOpen = () => setOpen(true);
   const handleClose = () => {
     setOpen(false);
-    setNewPolicy({
-      policyType: "",
-      description: "",
+    setNewQuestion({ question: "" });
+  };
+
+  const handleOpenReply = (question) => {
+    setReplyData({
+      id: question.id,
+      answer: question.answer || "",
     });
+    setOpenReply(true);
   };
 
-  const handleOpenEdit = (policy) => {
-    setEditPolicy(policy);
-    setOpenEdit(true);
+  const handleCloseReply = () => {
+    setOpenReply(false);
+    setReplyData({ id: null, answer: "" });
   };
 
-  const handleCloseEdit = () => {
-    setOpenEdit(false);
-    setEditPolicy(null);
-  };
-
-  const handleOpenDelete = (policy) => {
-    setDeletePolicy(policy);
+  const handleOpenDelete = (question) => {
+    setDeleteQuestion(question);
     setOpenDelete(true);
   };
 
@@ -117,27 +116,21 @@ function Policies() {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setNewPolicy({
-      ...newPolicy,
+    setNewQuestion({
+      ...newQuestion,
       [name]: value,
     });
   };
 
-  const handleDescriptionChange = (value) => {
-    setNewPolicy({
-      ...newPolicy,
-      description: value,
+  const handleReplyInputChange = (e) => {
+    const { value } = e.target;
+    setReplyData({
+      ...replyData,
+      answer: value,
     });
   };
 
-  const handleEditDescriptionChange = (value) => {
-    setEditPolicy({
-      ...editPolicy,
-      description: value,
-    });
-  };
-
-  const handleCreatePolicy = async () => {
+  const handleCreateQuestion = async () => {
     try {
       const token = localStorage.getItem("token");
       setLoading(true);
@@ -147,14 +140,14 @@ function Policies() {
         return;
       }
 
-      const response = await fetch(`${baseUrl}/policy`, {
+      const response = await fetch(`${baseUrl}/askQuestion`, {
         method: "POST",
         headers: {
           "x-authorization": "RGVlcGFrS3-VzaHdhaGE5Mzk5MzY5ODU0-QWxoblBvb2ph",
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(newPolicy),
+        body: JSON.stringify(newQuestion),
       });
 
       const data = await response.json();
@@ -162,23 +155,23 @@ function Policies() {
       if (response.ok) {
         setSnackbar({
           open: true,
-          message: data.message || "Policy created successfully!",
+          message: data.message || "Question submitted successfully!",
           severity: "success",
         });
         handleClose();
-        fetchPolicies();
+        fetchQuestions();
       } else {
         setSnackbar({
           open: true,
-          message: data.message || "Failed to create policy",
+          message: data.message || "Failed to submit question",
           severity: "error",
         });
       }
     } catch (error) {
-      console.error("Error creating policy:", error);
+      console.error("Error submitting question:", error);
       setSnackbar({
         open: true,
-        message: "Error creating policy. Please try again.",
+        message: "Error submitting question. Please try again.",
         severity: "error",
       });
     } finally {
@@ -186,17 +179,17 @@ function Policies() {
     }
   };
 
-  const handleUpdatePolicy = async () => {
+  const handleReplyQuestion = async () => {
     try {
       const token = localStorage.getItem("token");
       setLoading(true);
 
-      if (!token || !editPolicy) {
-        console.error("No token found or no policy selected for update");
+      if (!token || !replyData.id) {
+        console.error("No token found or no question selected for reply");
         return;
       }
 
-      const response = await fetch(`${baseUrl}/policy/${editPolicy.id}`, {
+      const response = await fetch(`${baseUrl}/askedQuestion.update`, {
         method: "PUT",
         headers: {
           "x-authorization": "RGVlcGFrS3-VzaHdhaGE5Mzk5MzY5ODU0-QWxoblBvb2ph",
@@ -204,7 +197,8 @@ function Policies() {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          description: editPolicy.description,
+          id: replyData.id,
+          answer: replyData.answer,
         }),
       });
 
@@ -213,23 +207,23 @@ function Policies() {
       if (response.ok) {
         setSnackbar({
           open: true,
-          message: data.message || "Policy updated successfully!",
+          message: data.message || "Reply submitted successfully!",
           severity: "success",
         });
-        handleCloseEdit();
-        fetchPolicies();
+        handleCloseReply();
+        fetchQuestions();
       } else {
         setSnackbar({
           open: true,
-          message: data.message || "Failed to update policy",
+          message: data.message || "Failed to submit reply",
           severity: "error",
         });
       }
     } catch (error) {
-      console.error("Error updating policy:", error);
+      console.error("Error submitting reply:", error);
       setSnackbar({
         open: true,
-        message: "Error updating policy. Please try again.",
+        message: "Error submitting reply. Please try again.",
         severity: "error",
       });
     } finally {
@@ -237,17 +231,17 @@ function Policies() {
     }
   };
 
-  const handleDeletePolicy = async () => {
+  const handleDeleteQuestion = async () => {
     try {
       const token = localStorage.getItem("token");
       setLoading(true);
 
-      if (!token || !deletePolicy) {
-        console.error("No token found or no policy selected for deletion");
+      if (!token || !deleteQuestion) {
+        console.error("No token found or no question selected for deletion");
         return;
       }
 
-      const response = await fetch(`${baseUrl}/policy/${deletePolicy.id}`, {
+      const response = await fetch(`${baseUrl}/askedQuestion.delete/${deleteQuestion.id}`, {
         method: "DELETE",
         headers: {
           "x-authorization": "RGVlcGFrS3-VzaHdhaGE5Mzk5MzY5ODU0-QWxoblBvb2ph",
@@ -260,23 +254,23 @@ function Policies() {
       if (response.ok) {
         setSnackbar({
           open: true,
-          message: data.message || "Policy deleted successfully!",
+          message: data.message || "Question deleted successfully!",
           severity: "success",
         });
         handleCloseDelete();
-        fetchPolicies();
+        fetchQuestions();
       } else {
         setSnackbar({
           open: true,
-          message: data.message || "Failed to delete policy",
+          message: data.message || "Failed to delete question",
           severity: "error",
         });
       }
     } catch (error) {
-      console.error("Error deleting policy:", error);
+      console.error("Error deleting question:", error);
       setSnackbar({
         open: true,
-        message: "Error deleting policy. Please try again.",
+        message: "Error deleting question. Please try again.",
         severity: "error",
       });
     } finally {
@@ -284,32 +278,36 @@ function Policies() {
     }
   };
 
-  useEffect(() => {
-    fetchPolicies();
-  }, [policyType]);
-
   const columns = [
     { Header: "ID", accessor: "id" },
-    // { Header: "Policy Type", accessor: "policyType" },
+    // {
+    //   Header: "User",
+    //   accessor: "user",
+    //   Cell: ({ value }) => (
+    //     <MDTypography variant="button" fontWeight="medium">
+    //       {value?.name || "N/A"} ({value?.email || "No email"})
+    //     </MDTypography>
+    //   ),
+    // },
+    { Header: "Question", accessor: "question" },
     {
-      Header: "Description",
-      accessor: "description",
+      Header: "Status",
+      accessor: "isReplied",
       Cell: ({ value }) => (
-        <div
-          dangerouslySetInnerHTML={{ __html: value }}
-          style={{ maxHeight: "100px", overflow: "hidden" }}
-        />
+        <MDTypography variant="button" fontWeight="medium" color={value ? "success" : "error"}>
+          {value ? "Replied" : "Pending"}
+        </MDTypography>
       ),
     },
-    { Header: "Created At", accessor: "createdAt" },
-    // { Header: "Updated At", accessor: "updatedAt" },
+    { Header: "Answer", accessor: "answer" },
+    // { Header: "Date", accessor: "createdAt" },
     {
       Header: "Actions",
       accessor: "actions",
       Cell: ({ row }) => (
         <MDBox display="flex" gap={1}>
-          <IconButton onClick={() => handleOpenEdit(row.original)}>
-            <EditIcon color="primary" />
+          <IconButton onClick={() => handleOpenReply(row.original)}>
+            <ReplyIcon color="info" />
           </IconButton>
           <IconButton onClick={() => handleOpenDelete(row.original)}>
             <DeleteIcon color="error" />
@@ -318,18 +316,6 @@ function Policies() {
       ),
     },
   ];
-
-  const modules = {
-    toolbar: [
-      [{ header: [1, 2, 3, false] }],
-      ["bold", "italic", "underline", "strike"],
-      [{ list: "ordered" }, { list: "bullet" }],
-      ["link"],
-      ["clean"],
-    ],
-  };
-
-  const formats = ["header", "bold", "italic", "underline", "strike", "list", "bullet", "link"];
 
   return (
     <DashboardLayout>
@@ -355,36 +341,25 @@ function Policies() {
                   flexWrap="wrap"
                 >
                   <MDTypography variant="h6" color="black">
-                    Policies
+                    Questions
                   </MDTypography>
-                  <MDBox display="flex" gap={2} flexWrap="wrap">
-                    <TextField
-                      label="Search by Policy Type"
-                      type="text"
-                      fullWidth
-                      value={policyType}
-                      onChange={(e) => setPolicyType(e.target.value)}
-                      sx={{
-                        mr: 2,
-                        width: { xs: "100%", sm: 200 },
-                        [theme.breakpoints.down("sm")]: {
-                          marginBottom: 2,
-                        },
-                      }}
-                    />
-                    <Button variant="contained" color="error" onClick={handleOpen}>
-                      Create Policy
-                    </Button>
-                  </MDBox>
+                  {/* <Button variant="contained" color="error" onClick={handleOpen}>
+                    Add New Question
+                  </Button> */}
                 </MDBox>
               </MDBox>
               <MDBox pt={3}>
                 <DataTable
-                  table={{ columns, rows: policies }}
+                  table={{ columns, rows: questions }}
                   isSorted={false}
                   entriesPerPage={false}
                   showTotalEntries={false}
                   noEndBorder
+                  pagination={{
+                    page,
+                    totalPages,
+                    onChange: (newPage) => setPage(newPage),
+                  }}
                 />
               </MDBox>
             </Card>
@@ -393,60 +368,58 @@ function Policies() {
       </MDBox>
       <Footer />
 
-      {/* Create Policy Dialog */}
-      <Dialog open={open} onClose={handleClose} fullWidth maxWidth="md">
-        <DialogTitle>Create New Policy</DialogTitle>
+      {/* Ask New Question Dialog */}
+      <Dialog open={open} onClose={handleClose}>
+        <DialogTitle>Ask New Question</DialogTitle>
         <DialogContent>
           <TextField
             autoFocus
             margin="dense"
-            id="policyType"
-            label="Policy Type"
+            id="question"
+            label="Your Question"
             type="text"
             fullWidth
             variant="standard"
-            value={newPolicy.policyType}
+            multiline
+            rows={4}
+            value={newQuestion.question}
             onChange={handleInputChange}
-            name="policyType"
-            sx={{ mb: 3 }}
-          />
-          <InputLabel>Description</InputLabel>
-          <ReactQuill
-            theme="snow"
-            value={newPolicy.description}
-            onChange={handleDescriptionChange}
-            modules={modules}
-            formats={formats}
-            style={{ height: "200px", marginBottom: "50px" }}
+            name="question"
           />
         </DialogContent>
         <DialogActions>
           <Button onClick={handleClose}>Cancel</Button>
-          <Button onClick={handleCreatePolicy}>Create</Button>
+          <Button onClick={handleCreateQuestion}>Submit</Button>
         </DialogActions>
       </Dialog>
 
-      {/* Edit Policy Dialog */}
-      <Dialog open={openEdit} onClose={handleCloseEdit} fullWidth maxWidth="md">
-        <DialogTitle>Edit Policy</DialogTitle>
+      {/* Reply Question Dialog */}
+      <Dialog open={openReply} onClose={handleCloseReply} fullWidth maxWidth="md">
+        <DialogTitle>Reply to Question</DialogTitle>
         <DialogContent>
           <MDBox mb={2}>
-            <MDTypography variant="h6">Policy Type:</MDTypography>
-            <MDTypography>{editPolicy?.policyType}</MDTypography>
+            <MDTypography variant="h6">Question:</MDTypography>
+            <MDTypography>
+              {questions.find((q) => q.id === replyData.id)?.question || ""}
+            </MDTypography>
           </MDBox>
-          <InputLabel>Description</InputLabel>
-          <ReactQuill
-            theme="snow"
-            value={editPolicy?.description || ""}
-            onChange={handleEditDescriptionChange}
-            modules={modules}
-            formats={formats}
-            style={{ height: "200px", marginBottom: "50px" }}
+          <TextField
+            autoFocus
+            margin="dense"
+            id="answer"
+            label="Your Answer"
+            type="text"
+            fullWidth
+            variant="standard"
+            multiline
+            rows={2}
+            value={replyData.answer}
+            onChange={handleReplyInputChange}
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseEdit}>Cancel</Button>
-          <Button onClick={handleUpdatePolicy}>Update</Button>
+          <Button onClick={handleCloseReply}>Cancel</Button>
+          <Button onClick={handleReplyQuestion}>Submit Reply</Button>
         </DialogActions>
       </Dialog>
 
@@ -455,27 +428,13 @@ function Policies() {
         <DialogTitle>Confirm Delete</DialogTitle>
         <DialogContent>
           <MDTypography>
-            Are you sure you want to delete this policy: <strong>{deletePolicy?.policyType}</strong>
-            ?
+            Are you sure you want to delete this question:
+            <strong> {deleteQuestion?.question}</strong>?
           </MDTypography>
-          <MDTypography mt={2}>
-            <strong>Description:</strong>
-          </MDTypography>
-          <div
-            dangerouslySetInnerHTML={{ __html: deletePolicy?.description || "" }}
-            style={{
-              maxHeight: "200px",
-              overflow: "auto",
-              border: "1px solid #eee",
-              padding: "10px",
-              borderRadius: "4px",
-              marginTop: "10px",
-            }}
-          />
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseDelete}>Cancel</Button>
-          <Button onClick={handleDeletePolicy} color="error" variant="contained">
+          <Button onClick={handleDeleteQuestion} color="error" variant="contained">
             Delete
           </Button>
         </DialogActions>
@@ -499,17 +458,30 @@ function Policies() {
   );
 }
 
-Policies.propTypes = {
+AskQuestions.propTypes = {
   row: PropTypes.shape({
     original: PropTypes.shape({
       id: PropTypes.number.isRequired,
-      policyType: PropTypes.string.isRequired,
-      description: PropTypes.string.isRequired,
+      question: PropTypes.string.isRequired,
+      answer: PropTypes.string,
+      isReplied: PropTypes.bool.isRequired,
       createdAt: PropTypes.string.isRequired,
       updatedAt: PropTypes.string.isRequired,
+      user: PropTypes.shape({
+        id: PropTypes.number.isRequired,
+        name: PropTypes.string.isRequired,
+        email: PropTypes.string,
+      }).isRequired,
     }).isRequired,
   }).isRequired,
-  value: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+  value: PropTypes.oneOfType([
+    PropTypes.string,
+    PropTypes.shape({
+      name: PropTypes.string,
+      email: PropTypes.string,
+    }),
+    PropTypes.bool,
+  ]),
 };
 
-export default Policies;
+export default AskQuestions;

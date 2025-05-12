@@ -472,8 +472,8 @@ function Banners() {
               <label htmlFor="bannerImageInput">
                 <Button
                   component="span"
-                  variant="outlined"
-                  color="primary"
+                  variant="contained"
+                  color="error"
                   startIcon={<CloudUploadIcon />}
                   disabled={uploading}
                   fullWidth

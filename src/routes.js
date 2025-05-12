@@ -25,6 +25,9 @@ import Reports from "layouts/tables/invoiceandreports";
 import Inquiries from "layouts/tables/inquries";
 import InsurancePlansManagement from "layouts/tables/insurance";
 import PaymentTransactions from "layouts/tables/accountsection";
+import LabOrders from "layouts/tables/laborders";
+import AskQuestions from "layouts/tables/askquestion";
+import Tips from "layouts/tables/tips";
 
 const routes = [
   {
@@ -141,6 +144,22 @@ const routes = [
   },
   {
     type: "collapse",
+    name: "Asked Question",
+    key: "Asked Question",
+    icon: <Icon fontSize="small">policy</Icon>, // policy icon for policies
+    route: "/asked-question",
+    component: <AskQuestions />,
+  },
+  {
+    type: "collapse",
+    name: "Tips",
+    key: "Tips",
+    icon: <Icon fontSize="small">policy</Icon>, // policy icon for policies
+    route: "/tips",
+    component: <Tips />,
+  },
+  {
+    type: "collapse",
     name: "Author Details",
     key: "author",
     icon: <Icon fontSize="small">people</Icon>, // people icon for users
@@ -157,11 +176,19 @@ const routes = [
   },
   {
     type: "collapse",
-    name: "Order",
-    key: "order",
+    name: "Medicine Order",
+    key: "Medicine order",
     icon: <Icon fontSize="small">assignment</Icon>, // assignment icon for orders
-    route: "/order",
+    route: "/medicine-order",
     component: <Orders />,
+  },
+  {
+    type: "collapse",
+    name: "Lab Order",
+    key: "Lab order",
+    icon: <Icon fontSize="small">assignment</Icon>, // assignment icon for orders
+    route: "/lab-order",
+    component: <LabOrders />,
   },
   {
     type: "collapse",

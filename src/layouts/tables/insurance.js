@@ -414,15 +414,29 @@ function InsurancePlansManagement() {
   };
 
   const columns = [
-    {
-      Header: "Plan",
-      accessor: "plan",
-      Cell: ({ row }) => <PlanItem item={row.original} />,
-    },
+    // {
+    //   Header: "Plan",
+    //   accessor: "plan",
+    //   Cell: ({ row }) => <PlanItem item={row.original} />,
+    // },
+
     {
       Header: "Plan ID",
       accessor: "plan_id",
     },
+    {
+      Header: "Member",
+      accessor: "member",
+    },
+    {
+      Header: "Existing disease",
+      accessor: "existing_disease",
+    },
+    {
+      Header: "details of disease",
+      accessor: "existing_disease_details",
+    },
+
     {
       Header: "Status",
       accessor: "plan_status",
@@ -440,23 +454,23 @@ function InsurancePlansManagement() {
         />
       ),
     },
-    {
-      Header: "Actions",
-      accessor: "actions",
-      Cell: ({ row }) => (
-        <Box>
-          <IconButton onClick={() => editPlan(row.original)} color="info">
-            <EditIcon />
-          </IconButton>
-          <IconButton
-            onClick={() => setDialogState((prev) => ({ ...prev, confirmDelete: row.original.id }))}
-            color="error"
-          >
-            <DeleteIcon />
-          </IconButton>
-        </Box>
-      ),
-    },
+    // {
+    //   Header: "Actions",
+    //   accessor: "actions",
+    //   Cell: ({ row }) => (
+    //     <Box>
+    //       {/* <IconButton onClick={() => editPlan(row.original)} color="info">
+    //         <EditIcon />
+    //       </IconButton> */}
+    //       {/* <IconButton
+    //         onClick={() => setDialogState((prev) => ({ ...prev, confirmDelete: row.original.id }))}
+    //         color="error"
+    //       >
+    //         <DeleteIcon />
+    //       </IconButton> */}
+    //     </Box>
+    //   ),
+    // },
   ];
 
   if (state.loading && state.plans.length === 0) {
@@ -499,19 +513,19 @@ function InsurancePlansManagement() {
                   </MDTypography>
                   <MDBox display="flex" gap={2} flexWrap="wrap" alignItems="center">
                     <TextField
-                      label="Search Plans"
+                      label="Search health insurance"
                       value={state.searchTerm}
                       onChange={handleSearchChange}
                       sx={{ width: 300 }}
                       size="small"
                     />
-                    <Button
+                    {/* <Button
                       variant="contained"
                       color="error"
                       onClick={() => setDialogState({ open: true, isEdit: false, editingId: null })}
                     >
                       Create New Plan
-                    </Button>
+                    </Button> */}
                   </MDBox>
                 </MDBox>
               </MDBox>

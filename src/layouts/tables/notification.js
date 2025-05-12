@@ -18,6 +18,10 @@ import Footer from "examples/Footer";
 import DataTable from "examples/Tables/DataTable";
 import Snackbar from "@mui/material/Snackbar";
 import MuiAlert from "@mui/material/Alert";
+import MenuItem from "@mui/material/MenuItem";
+import Select from "@mui/material/Select";
+import FormControl from "@mui/material/FormControl";
+import InputLabel from "@mui/material/InputLabel";
 
 const Alert = React.forwardRef(function Alert(props, ref) {
   return <MuiAlert elevation={6} ref={ref} variant="filled" {...props} />;
@@ -51,6 +55,14 @@ function NotificationManagement() {
   const xAuthHeader =
     process.env.REACT_APP_X_AUTHORIZATION || "RGVlcGFrS3-VzaHdhaGE5Mzk5MzY5ODU0-QWxoblBvb2ph";
 
+  const moduleOptions = ["User", "Delivery-Partner", "Vendor"];
+  const frequencyOptions = [
+    { value: "daily", label: "Daily" },
+    { value: "alternate", label: "Alternate" },
+    { value: "custom", label: "Custom" },
+    { value: "one-time", label: "One-time" },
+  ];
+
   const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);
 
@@ -59,6 +71,14 @@ function NotificationManagement() {
     setNotification({
       ...notification,
       [name]: type === "checkbox" ? checked : value,
+    });
+  };
+
+  const handleSelectChange = (event) => {
+    const { name, value } = event.target;
+    setNotification({
+      ...notification,
+      [name]: value,
     });
   };
 
@@ -197,20 +217,28 @@ function NotificationManagement() {
       <Footer />
 
       {/* Send Notification Dialog */}
-      <Dialog open={open} onClose={handleClose}>
+      <Dialog open={open} onClose={handleClose} fullWidth maxWidth="sm">
         <DialogTitle>Send Notification</DialogTitle>
         <DialogContent>
-          <TextField
-            autoFocus
-            margin="dense"
-            label="Module"
-            name="module"
-            type="text"
-            fullWidth
-            variant="outlined"
-            value={notification.module}
-            onChange={handleInputChange}
-          />
+          <FormControl fullWidth margin="dense">
+            <InputLabel id="module-label">Module</InputLabel>
+            <Select
+              labelId="module-label"
+              id="module"
+              name="module"
+              value={notification.module}
+              label="Module"
+              onChange={handleSelectChange}
+              sx={{ width: 250, height: 40 }}
+            >
+              {moduleOptions.map((option) => (
+                <MenuItem key={option} value={option}>
+                  {option}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
           <TextField
             margin="dense"
             label="Content"
@@ -220,7 +248,10 @@ function NotificationManagement() {
             variant="outlined"
             value={notification.content}
             onChange={handleInputChange}
+            multiline
+            rows={3}
           />
+
           <TextField
             margin="dense"
             label="Link"
@@ -231,6 +262,40 @@ function NotificationManagement() {
             value={notification.link}
             onChange={handleInputChange}
           />
+
+          <FormControl fullWidth margin="dense">
+            <InputLabel id="frequency-label">Notification Frequency</InputLabel>
+            <Select
+              labelId="frequency-label"
+              id="notificationFrequency"
+              name="notificationFrequency"
+              value={notification.notificationFrequency}
+              label="Notification Frequency"
+              onChange={handleSelectChange}
+              sx={{ width: 250, height: 40 }}
+            >
+              {frequencyOptions.map((option) => (
+                <MenuItem key={option.value} value={option.value}>
+                  {option.label}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          {notification.notificationFrequency === "custom" && (
+            <TextField
+              margin="dense"
+              label="Frequency (days)"
+              name="frequency"
+              type="number"
+              fullWidth
+              variant="outlined"
+              value={notification.frequency}
+              onChange={handleInputChange}
+              inputProps={{ min: 1 }}
+            />
+          )}
+
           <TextField
             margin="dense"
             label="Date From"
@@ -240,7 +305,9 @@ function NotificationManagement() {
             variant="outlined"
             value={notification.dateFrom}
             onChange={handleInputChange}
+            InputLabelProps={{ shrink: true }}
           />
+
           <TextField
             margin="dense"
             label="Date To"
@@ -250,44 +317,28 @@ function NotificationManagement() {
             variant="outlined"
             value={notification.dateTo}
             onChange={handleInputChange}
+            InputLabelProps={{ shrink: true }}
           />
-          <TextField
-            margin="dense"
-            label="Notification Frequency"
-            name="notificationFrequency"
-            type="text"
-            fullWidth
-            variant="outlined"
-            value={notification.notificationFrequency}
-            onChange={handleInputChange}
-          />
-          <TextField
-            margin="dense"
-            label="Frequency"
-            name="frequency"
-            type="number"
-            fullWidth
-            variant="outlined"
-            value={notification.frequency}
-            onChange={handleInputChange}
-          />
-          <MDBox display="flex" gap={2} flexWrap="wrap">
-            <MDTypography>
+
+          <MDBox display="flex" gap={2} flexWrap="wrap" mt={2}>
+            <MDTypography display="flex" alignItems="center">
               Is Push:
               <input
                 type="checkbox"
                 name="isPush"
                 checked={notification.isPush}
                 onChange={handleInputChange}
+                style={{ marginLeft: 8 }}
               />
             </MDTypography>
-            <MDTypography>
+            <MDTypography display="flex" alignItems="center">
               Is Default:
               <input
                 type="checkbox"
                 name="isDefault"
                 checked={notification.isDefault}
                 onChange={handleInputChange}
+                style={{ marginLeft: 8 }}
               />
             </MDTypography>
           </MDBox>

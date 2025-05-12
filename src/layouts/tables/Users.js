@@ -237,6 +237,8 @@ function Users() {
 
   const columns = [
     { Header: "User Name", accessor: "name" },
+    { Header: "Age", accessor: "age" || "N/A" },
+    { Header: "Gender", accessor: "gendre" || "N/A" },
     { Header: "Phone", accessor: "phone" },
     { Header: "Email", accessor: "email" },
     { Header: "User Type", accessor: "userType" },

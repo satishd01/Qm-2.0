@@ -279,15 +279,21 @@ function Orders() {
       const token = localStorage.getItem("token");
 
       const statusParam = state.selectedStatus === "All" ? "" : state.selectedStatus;
-      const response = await fetch(
-        `${baseUrl}/adminOrders1/${statusParam}?page=${state.currentPage}&page_size=${DEFAULT_PAGE_SIZE}`,
-        {
-          headers: {
-            "x-authorization": xAuthHeader,
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      const vendorType = "Medicine Vendor"; // You can also make this dynamic if needed
+
+      const queryParams = new URLSearchParams({
+        ...(statusParam && { status: statusParam }),
+        vendorType,
+        page: state.currentPage,
+        page_size: DEFAULT_PAGE_SIZE,
+      });
+
+      const response = await fetch(`${baseUrl}/adminOrders1?${queryParams.toString()}`, {
+        headers: {
+          "x-authorization": xAuthHeader,
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
       const data = await response.json();
       if (!response.ok) throw new Error(data?.message || "Failed to fetch orders");
@@ -296,7 +302,7 @@ function Orders() {
         setState((prev) => ({
           ...prev,
           orders: data.orders,
-          totalPages: Math.ceil(data.orders.length / DEFAULT_PAGE_SIZE),
+          totalPages: Math.ceil(data.total / DEFAULT_PAGE_SIZE),
           loading: false,
         }));
       }

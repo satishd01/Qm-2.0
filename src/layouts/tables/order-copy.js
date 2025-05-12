@@ -2,7 +2,6 @@ import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "@mui/material/styles";
 import PropTypes from "prop-types";
-import UploadIcon from "@mui/icons-material/Upload";
 import {
   Grid,
   Card,
@@ -172,7 +171,6 @@ function Orders() {
     images: [],
     currentIndex: 0,
   });
-  console.log("Prescription Modal State:", prescriptionModal);
 
   const baseUrl = process.env.REACT_APP_BASE_URL || "https://quickmeds.sndktech.online";
   const xAuthHeader =
@@ -563,96 +561,32 @@ function Orders() {
     {
       Header: "Details",
       accessor: "actions",
-      Cell: ({ row }) => {
-        const order = row.original;
-
-        const handleFileUpload = async (event) => {
-          const file = event.target.files[0];
-          if (!file) return;
-
-          const formData = new FormData();
-          formData.append("files", file);
-
-          try {
-            const uploadResponse = await fetch("https://quickmeds.sndktech.online/upload-files", {
-              method: "POST",
-              headers: {
-                "x-authorization": "RGVlcGFrS3-VzaHdhaGE5Mzk5MzY5ODU0-QWxoblBvb2ph",
-                Authorization:
-                  "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiaWF0IjoxNzQxNTE5MTM1LCJleHAiOjE3NDIxMjM5MzV9._pPDrGFeA7uYP_5ZjBxHSTHExF73XctzQRTKOy-7tEY",
-              },
-              body: formData,
-            });
-
-            const uploadData = await uploadResponse.json();
-            const uploadedFileName = uploadData?.files?.[0];
-
-            if (uploadedFileName) {
-              await fetch(`https://quickmeds.sndktech.online/adminOrderStatus/${order.id}`, {
-                method: "PUT",
-                headers: {
-                  "x-authorization": "RGVlcGFrS3-VzaHdhaGE5Mzk5MzY5ODU0-QWxoblBvb2ph",
-                  Authorization:
-                    "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiaWF0IjoxNzQxNTE5MTM1LCJleHAiOjE3NDIxMjM5MzV9._pPDrGFeA7uYP_5ZjBxHSTHExF73XctzQRTKOy-7tEY",
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                  status: "E-Consultation",
-                  prescription: uploadedFileName,
-                }),
-              });
-              setState((prev) => ({
-                ...prev,
-                snackbar: {
-                  open: true,
-                  message: "File Uploaded successfully!",
-                  severity: "success",
-                },
-                currentPage: 1,
-              }));
-            }
-          } catch (error) {
-            console.error("Upload failed", error);
-            alert("Upload failed. Please try again.");
-          }
-        };
-
-        return (
-          <Box>
-            <IconButton
-              onClick={() => setDialogState({ viewOpen: true, currentOrder: order })}
-              size="small"
-            >
-              <VisibilityIcon color="info" />
-            </IconButton>
-
-            {order.status === "Pending" && (
-              <>
-                <IconButton onClick={() => handleStatusChange(order.id, "Accepted")} size="small">
-                  <CheckCircleIcon color="success" />
-                </IconButton>
-                <IconButton onClick={() => handleStatusChange(order.id, "Rejected")} size="small">
-                  <CancelIcon color="error" />
-                </IconButton>
-              </>
-            )}
-
-            {order.status === "E-Consultation" && (
-              <label htmlFor={`file-upload-${order.id}`}>
-                <input
-                  id={`file-upload-${order.id}`}
-                  type="file"
-                  style={{ display: "none" }}
-                  onChange={handleFileUpload}
-                />
-                <IconButton component="span" size="small">
-                  <UploadIcon color="primary" />
-                </IconButton>
-              </label>
-            )}
-          </Box>
-        );
-      },
+      Cell: ({ row }) => (
+        <Box>
+          <IconButton
+            onClick={() => setDialogState({ viewOpen: true, currentOrder: row.original })}
+            size="small"
+          >
+            <VisibilityIcon color="info" />
+          </IconButton>
+          {row.original.status === "Pending" && (
+            <>
+              <IconButton
+                onClick={() => handleStatusChange(row.original.id, "Accepted")}
+                size="small"
+              >
+                <CheckCircleIcon color="success" />
+              </IconButton>
+              <IconButton
+                onClick={() => handleStatusChange(row.original.id, "Rejected")}
+                size="small"
+              >
+                <CancelIcon color="error" />
+              </IconButton>
+            </>
+          )}
+        </Box>
+      ),
     },
   ];
 

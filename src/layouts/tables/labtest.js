@@ -14,13 +14,21 @@ import {
   IconButton,
   Pagination,
   CircularProgress,
-  InputAdornment,
   Snackbar,
+  MenuItem,
+  Select,
+  FormControl,
+  InputLabel,
+  Switch,
+  FormGroup,
+  FormControlLabel,
+  InputAdornment,
 } from "@mui/material";
 import {
   AddCircle as AddCircleIcon,
   RemoveCircle as RemoveCircleIcon,
   CloudUpload as CloudUploadIcon,
+  Schedule as ScheduleIcon,
 } from "@mui/icons-material";
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
@@ -54,10 +62,17 @@ function LabTests() {
   const [dialogState, setDialogState] = useState({
     open: false,
     uploading: false,
+    slotDialog: {
+      open: false,
+      labTestId: null,
+      loading: false,
+    },
   });
   const [formData, setFormData] = useState({
     bannerImage: "",
     coverImage: "",
+    prescription: "",
+    prescriptionRequired: false,
     testName: "",
     description: "",
     mrp: 0,
@@ -68,11 +83,47 @@ function LabTests() {
     others: [],
     containsMultipleTest: [],
     faq: [],
+    discount: 0,
+    fasting: false,
+  });
+  const [slotForm, setSlotForm] = useState({
+    slot: "",
+    date: "",
+    time: "",
+    price: "",
   });
 
   const baseUrl = process.env.REACT_APP_BASE_URL || "https://quickmeds.sndktech.online";
   const xAuthHeader =
     process.env.REACT_APP_X_AUTHORIZATION || "RGVlcGFrS3-VzaHdhaGE5Mzk5MzY5ODU0-QWxoblBvb2ph";
+
+  // Time slots options
+  const timeSlots = [
+    "01AM to 02AM",
+    "02AM to 03AM",
+    "03AM to 04AM",
+    "04AM to 05AM",
+    "05AM to 06AM",
+    "06AM to 07AM",
+    "07AM to 08AM",
+    "08AM to 09AM",
+    "09AM to 10AM",
+    "10AM to 11AM",
+    "11AM to 12PM",
+    "12PM to 01PM",
+    "01PM to 02PM",
+    "02PM to 03PM",
+    "03PM to 04PM",
+    "04PM to 05PM",
+    "05PM to 06PM",
+    "06PM to 07PM",
+    "07PM to 08PM",
+    "08PM to 09PM",
+    "09PM to 10PM",
+    "10PM to 11PM",
+    "11PM to 12AM",
+    "12AM to 01AM",
+  ];
 
   const fetchLabTests = useCallback(async () => {
     try {
@@ -127,6 +178,14 @@ function LabTests() {
     setFormData((prev) => ({
       ...prev,
       [name]: name === "mrp" || name === "sellingPrice" ? parseFloat(value) || 0 : value,
+    }));
+  };
+
+  const handleSlotInputChange = (e) => {
+    const { name, value } = e.target;
+    setSlotForm((prev) => ({
+      ...prev,
+      [name]: value,
     }));
   };
 
@@ -214,6 +273,31 @@ function LabTests() {
     }
   };
 
+  const handleDiscountChange = (e) => {
+    const discount = parseFloat(e.target.value) || 0;
+    const mrp = formData.mrp;
+    const sellingPrice = mrp - (mrp * discount) / 100;
+    setFormData((prev) => ({
+      ...prev,
+      discount,
+      sellingPrice,
+    }));
+  };
+
+  const handlePrescriptionRequiredChange = (e) => {
+    setFormData((prev) => ({
+      ...prev,
+      prescriptionRequired: e.target.checked,
+    }));
+  };
+
+  const handleFastingChange = (e) => {
+    setFormData((prev) => ({
+      ...prev,
+      fasting: e.target.checked,
+    }));
+  };
+
   const handleSubmit = async () => {
     try {
       const token = localStorage.getItem("token");
@@ -278,12 +362,136 @@ function LabTests() {
     }
   };
 
+  const handleOpenSlotDialog = (labTestId) => {
+    setDialogState((prev) => ({
+      ...prev,
+      slotDialog: {
+        ...prev.slotDialog,
+        open: true,
+        labTestId,
+      },
+    }));
+    // Reset form when opening
+    setSlotForm({
+      slot: "",
+      date: "",
+      time: "",
+      price: "",
+    });
+  };
+
+  const handleCloseSlotDialog = () => {
+    setDialogState((prev) => ({
+      ...prev,
+      slotDialog: {
+        ...prev.slotDialog,
+        open: false,
+        labTestId: null,
+        loading: false,
+      },
+    }));
+  };
+
+  const handleCreateSlot = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        navigate("/authentication/sign-in");
+        return;
+      }
+
+      if (!slotForm.slot || !slotForm.date || !slotForm.time || !slotForm.price) {
+        setState((prev) => ({
+          ...prev,
+          snackbar: {
+            open: true,
+            message: "All slot fields are required",
+            severity: "warning",
+          },
+        }));
+        return;
+      }
+
+      setDialogState((prev) => ({
+        ...prev,
+        slotDialog: {
+          ...prev.slotDialog,
+          loading: true,
+        },
+      }));
+
+      const payload = {
+        slot: parseInt(slotForm.slot),
+        date: slotForm.date,
+        time: slotForm.time,
+        price: slotForm.price,
+        labTestId: dialogState.slotDialog.labTestId,
+      };
+
+      const response = await fetch(`${baseUrl}/slots1.create`, {
+        method: "POST",
+        headers: {
+          "x-authorization": xAuthHeader,
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data?.message || "Failed to create slot");
+
+      setState((prev) => ({
+        ...prev,
+        snackbar: {
+          open: true,
+          message: "Slot created successfully!",
+          severity: "success",
+        },
+      }));
+      handleCloseSlotDialog();
+    } catch (error) {
+      console.error("Slot creation error:", error);
+      setState((prev) => ({
+        ...prev,
+        snackbar: {
+          open: true,
+          message: error.message,
+          severity: "error",
+        },
+      }));
+    } finally {
+      setDialogState((prev) => ({
+        ...prev,
+        slotDialog: {
+          ...prev.slotDialog,
+          loading: false,
+        },
+      }));
+    }
+  };
+
   const columns = [
     { Header: "Test Name", accessor: "testName" },
     { Header: "MRP", accessor: "mrp" },
     { Header: "Selling Price", accessor: "sellingPrice" },
     { Header: "Sample Required", accessor: "sampleRequired" },
     { Header: "Recommended For", accessor: "recommendedFor" },
+    {
+      Header: "Actions",
+      accessor: "actions",
+      Cell: ({ row }) => (
+        <Button
+          variant="contained"
+          color="error"
+          size="small"
+          startIcon={<ScheduleIcon />}
+          onClick={() => handleOpenSlotDialog(row.original.id)}
+        >
+          Add Slot
+        </Button>
+      ),
+    },
   ];
 
   const filteredLabTests = state.labTests.filter((test) => {
@@ -449,6 +657,20 @@ function LabTests() {
                 </Grid>
                 <Grid item xs={6}>
                   <TextField
+                    label="Discount (%)"
+                    name="discount"
+                    type="number"
+                    value={formData.discount}
+                    onChange={handleDiscountChange}
+                    fullWidth
+                    margin="normal"
+                    InputProps={{
+                      startAdornment: <InputAdornment position="start">%</InputAdornment>,
+                    }}
+                  />
+                </Grid>
+                <Grid item xs={6}>
+                  <TextField
                     label="Selling Price (₹)"
                     name="sellingPrice"
                     type="number"
@@ -495,8 +717,8 @@ function LabTests() {
                   <label htmlFor="bannerImageInput">
                     <Button
                       component="span"
-                      variant="outlined"
-                      color="primary"
+                      variant="contained"
+                      color="error"
                       startIcon={<CloudUploadIcon />}
                       disabled={dialogState.uploading}
                       fullWidth
@@ -521,8 +743,8 @@ function LabTests() {
                   <label htmlFor="coverImageInput">
                     <Button
                       component="span"
-                      variant="outlined"
-                      color="primary"
+                      variant="contained"
+                      color="error"
                       startIcon={<CloudUploadIcon />}
                       disabled={dialogState.uploading}
                       fullWidth
@@ -579,7 +801,8 @@ function LabTests() {
                 </MDBox>
               ))}
               <Button
-                variant="outlined"
+                variant="contained"
+                color="error"
                 startIcon={<AddCircleIcon />}
                 onClick={() => handleAddSectionItem("others")}
                 sx={{ mt: 2 }}
@@ -628,7 +851,8 @@ function LabTests() {
                 </MDBox>
               ))}
               <Button
-                variant="outlined"
+                variant="contained"
+                color="error"
                 startIcon={<AddCircleIcon />}
                 onClick={() => handleAddSectionItem("faq")}
                 sx={{ mt: 2 }}
@@ -636,19 +860,154 @@ function LabTests() {
                 Add FAQ
               </Button>
             </Grid>
+
+            {/* Prescription and Fasting */}
+            <Grid item xs={12}>
+              <MDTypography variant="h6" gutterBottom mt={2}>
+                Additional Options
+              </MDTypography>
+              <FormGroup>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={formData.prescriptionRequired}
+                      onChange={handlePrescriptionRequiredChange}
+                      name="prescriptionRequired"
+                    />
+                  }
+                  label="Prescription Required"
+                />
+                {formData.prescriptionRequired && (
+                  <input
+                    type="file"
+                    id="prescriptionInput"
+                    onChange={(e) => handleImageUpload(e, "prescription")}
+                    style={{ display: "none" }}
+                    accept="image/*"
+                  />
+                )}
+                {formData.prescriptionRequired && (
+                  <label htmlFor="prescriptionInput">
+                    <Button
+                      component="span"
+                      variant="contained"
+                      color="error"
+                      startIcon={<CloudUploadIcon />}
+                      disabled={dialogState.uploading}
+                      fullWidth
+                    >
+                      {dialogState.uploading ? "Uploading..." : "Upload Prescription"}
+                    </Button>
+                  </label>
+                )}
+                {formData.prescription && (
+                  <MDTypography variant="caption" display="block" noWrap>
+                    {formData.prescription.split("/").pop()}
+                  </MDTypography>
+                )}
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={formData.fasting}
+                      onChange={handleFastingChange}
+                      name="fasting"
+                    />
+                  }
+                  label="Fasting Required"
+                />
+              </FormGroup>
+            </Grid>
           </Grid>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDialogState((prev) => ({ ...prev, open: false }))}>
             Cancel
           </Button>
-          <Button
-            onClick={handleSubmit}
-            color="error"
-            variant="contained"
-            disabled={!formData.testName || !formData.description}
-          >
+          <Button onClick={handleSubmit} color="error" variant="contained">
             Create Lab Test
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Add Slot Dialog */}
+      <Dialog
+        open={dialogState.slotDialog.open}
+        onClose={handleCloseSlotDialog}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>Add New Slot</DialogTitle>
+        <DialogContent dividers>
+          <Grid container spacing={2}>
+            <Grid item xs={12}>
+              <TextField
+                label="Slot Number"
+                name="slot"
+                type="number"
+                value={slotForm.slot}
+                onChange={handleSlotInputChange}
+                fullWidth
+                margin="normal"
+                InputProps={{
+                  inputProps: { min: 1 },
+                }}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                label="Date"
+                name="date"
+                type="date"
+                value={slotForm.date}
+                onChange={handleSlotInputChange}
+                fullWidth
+                margin="normal"
+                InputLabelProps={{ shrink: true }}
+              />
+            </Grid>
+            <Grid item xs={12}>
+              <FormControl fullWidth margin="normal">
+                <InputLabel>Time Slot</InputLabel>
+                <Select
+                  name="time"
+                  value={slotForm.time}
+                  onChange={handleSlotInputChange}
+                  label="Time Slot"
+                  sx={{ width: 250, height: 40 }}
+                >
+                  {timeSlots.map((slot) => (
+                    <MenuItem key={slot} value={slot}>
+                      {slot}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12}>
+              <TextField
+                label="Price"
+                name="price"
+                type="number"
+                value={slotForm.price}
+                onChange={handleSlotInputChange}
+                fullWidth
+                margin="normal"
+                InputProps={{
+                  startAdornment: <InputAdornment position="start">₹</InputAdornment>,
+                  inputProps: { min: 0 },
+                }}
+              />
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseSlotDialog}>Cancel</Button>
+          <Button onClick={handleCreateSlot} color="error" variant="contained">
+            {dialogState.slotDialog.loading ? (
+              <CircularProgress size={24} color="inherit" />
+            ) : (
+              "Create Slot"
+            )}
           </Button>
         </DialogActions>
       </Dialog>
