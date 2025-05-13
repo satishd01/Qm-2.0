@@ -53,6 +53,7 @@ function Packages() {
   const [packages, setPackages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState([]);
+  const [labTests, setLabTests] = useState([]);
   const [types] = useState(["medicine vendor", "lab vendor"]);
 
   // Package management states
@@ -134,6 +135,29 @@ function Packages() {
     }
   };
 
+  // Fetch all lab tests
+  const fetchLabTests = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${baseUrl}/labTest.get`, {
+        headers: {
+          "x-authorization": xAuthHeader,
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await response.json();
+
+      if (data.status && data.labTests) {
+        setLabTests(data.labTests);
+      } else {
+        console.error("No lab tests data found");
+      }
+    } catch (error) {
+      console.error("Error fetching lab tests:", error);
+      showSnackbar("Failed to fetch lab tests", "error");
+    }
+  };
+
   const showSnackbar = (message, severity) => {
     setSnackbar({ open: true, message, severity });
   };
@@ -141,6 +165,7 @@ function Packages() {
   useEffect(() => {
     fetchPackages();
     fetchProducts();
+    fetchLabTests();
   }, []);
 
   // Package CRUD operations
@@ -291,13 +316,25 @@ function Packages() {
     });
   };
 
-  const handleViewProduct = (productId) => {
-    const product = products.find((p) => p.id === productId);
-    if (product) {
-      setProductViewDialog({
-        open: true,
-        product,
-      });
+  const handleViewProduct = (productId, type) => {
+    if (type === "medicine vendor") {
+      const product = products.find((p) => p.id === productId);
+      if (product) {
+        setProductViewDialog({
+          open: true,
+          product,
+          type: "medicine",
+        });
+      }
+    } else if (type === "lab vendor") {
+      const test = labTests.find((t) => t.id === productId);
+      if (test) {
+        setProductViewDialog({
+          open: true,
+          product: test,
+          type: "lab",
+        });
+      }
     }
   };
 
@@ -450,9 +487,18 @@ function Packages() {
                 setPackageDataDialog({
                   ...packageDataDialog,
                   type: e.target.value,
+                  productIds: [], // Reset product selection when type changes
                 })
               }
               label="Vendor Type"
+              sx={{
+                width: 600,
+                "& .MuiSelect-select": {
+                  minHeight: "50px", // 👈 This increases the visible height
+                  display: "flex",
+                  alignItems: "center",
+                },
+              }}
             >
               {types.map((type) => (
                 <MenuItem key={type} value={type}>
@@ -463,7 +509,9 @@ function Packages() {
           </FormControl>
 
           <FormControl fullWidth margin="normal">
-            <InputLabel>Products</InputLabel>
+            <InputLabel>
+              {packageDataDialog.type === "lab vendor" ? "Lab Tests" : "Products"}
+            </InputLabel>
             <Select
               multiple
               value={packageDataDialog.productIds}
@@ -471,11 +519,18 @@ function Packages() {
               renderValue={(selected) => (
                 <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
                   {selected.map((id) => {
-                    const product = products.find((p) => p.id === id);
-                    return product ? (
+                    let item;
+                    if (packageDataDialog.type === "lab vendor") {
+                      item = labTests.find((t) => t.id === id);
+                    } else {
+                      item = products.find((p) => p.id === id);
+                    }
+                    return item ? (
                       <Chip
                         key={id}
-                        label={product.productName}
+                        label={
+                          packageDataDialog.type === "lab vendor" ? item.testName : item.productName
+                        }
                         onDelete={() =>
                           setPackageDataDialog({
                             ...packageDataDialog,
@@ -487,31 +542,64 @@ function Packages() {
                   })}
                 </Box>
               )}
+              sx={{
+                width: 600,
+                "& .MuiSelect-select": {
+                  minHeight: "50px", // 👈 This increases the visible height
+                  display: "flex",
+                  alignItems: "center",
+                },
+              }}
             >
-              {products.map((product) => (
-                <MenuItem key={product.id} value={product.id}>
-                  <Checkbox checked={packageDataDialog.productIds.indexOf(product.id) > -1} />
-                  <ListItemText
-                    primary={product.productName}
-                    secondary={
-                      <Box display="flex" alignItems="center">
-                        <IconButton
-                          size="small"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleViewProduct(product.id);
-                          }}
-                        >
-                          <VisibilityIcon fontSize="small" />
-                        </IconButton>
-                        <Typography variant="caption">
-                          {product.productId} | ₹{product.price}
-                        </Typography>
-                      </Box>
-                    }
-                  />
-                </MenuItem>
-              ))}
+              {packageDataDialog.type === "lab vendor"
+                ? labTests.map((test) => (
+                    <MenuItem key={test.id} value={test.id}>
+                      <Checkbox checked={packageDataDialog.productIds.indexOf(test.id) > -1} />
+                      <ListItemText
+                        primary={test.testName}
+                        secondary={
+                          <Box display="flex" alignItems="center">
+                            <IconButton
+                              size="small"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleViewProduct(test.id, "lab vendor");
+                              }}
+                            >
+                              <VisibilityIcon fontSize="small" />
+                            </IconButton>
+                            <Typography variant="caption">
+                              {test.id} | ₹{test.sellingPrice}
+                            </Typography>
+                          </Box>
+                        }
+                      />
+                    </MenuItem>
+                  ))
+                : products.map((product) => (
+                    <MenuItem key={product.id} value={product.id}>
+                      <Checkbox checked={packageDataDialog.productIds.indexOf(product.id) > -1} />
+                      <ListItemText
+                        primary={product.productName}
+                        secondary={
+                          <Box display="flex" alignItems="center">
+                            <IconButton
+                              size="small"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleViewProduct(product.id, "medicine vendor");
+                              }}
+                            >
+                              <VisibilityIcon fontSize="small" />
+                            </IconButton>
+                            <Typography variant="caption">
+                              {product.productId} | ₹{product.price}
+                            </Typography>
+                          </Box>
+                        }
+                      />
+                    </MenuItem>
+                  ))}
             </Select>
           </FormControl>
         </DialogContent>
@@ -521,16 +609,16 @@ function Packages() {
           </Button>
           <Button
             variant="contained"
-            color="primary"
+            color="error"
             onClick={handleAddPackageData}
             disabled={!packageDataDialog.type || packageDataDialog.productIds.length === 0}
           >
-            Add Selected Products
+            Add Selected {packageDataDialog.type === "lab vendor" ? "Tests" : "Products"}
           </Button>
         </DialogActions>
       </Dialog>
 
-      {/* Product View Dialog */}
+      {/* Product/Lab Test View Dialog */}
       <Dialog
         open={productViewDialog.open}
         onClose={() => setProductViewDialog({ ...productViewDialog, open: false })}
@@ -539,7 +627,12 @@ function Packages() {
       >
         {productViewDialog.product && (
           <>
-            <DialogTitle>Product Details: {productViewDialog.product.productName}</DialogTitle>
+            <DialogTitle>
+              {productViewDialog.type === "lab" ? "Lab Test" : "Product"} Details:{" "}
+              {productViewDialog.type === "lab"
+                ? productViewDialog.product.testName
+                : productViewDialog.product.productName}
+            </DialogTitle>
             <DialogContent dividers>
               <Grid container spacing={2}>
                 <Grid item xs={12} md={6}>
@@ -547,31 +640,70 @@ function Packages() {
                     <Table>
                       <TableBody>
                         <TableRow>
-                          <TableCell>Product ID</TableCell>
-                          <TableCell>{productViewDialog.product.productId}</TableCell>
+                          <TableCell>ID</TableCell>
+                          <TableCell>
+                            {productViewDialog.type === "lab"
+                              ? productViewDialog.product.id
+                              : productViewDialog.product.productId}
+                          </TableCell>
                         </TableRow>
                         <TableRow>
                           <TableCell>Name</TableCell>
-                          <TableCell>{productViewDialog.product.productName}</TableCell>
+                          <TableCell>
+                            {productViewDialog.type === "lab"
+                              ? productViewDialog.product.testName
+                              : productViewDialog.product.productName}
+                          </TableCell>
                         </TableRow>
                         <TableRow>
                           <TableCell>Price</TableCell>
-                          <TableCell>₹{productViewDialog.product.price}</TableCell>
+                          <TableCell>
+                            ₹
+                            {productViewDialog.type === "lab"
+                              ? productViewDialog.product.sellingPrice
+                              : productViewDialog.product.price}
+                          </TableCell>
                         </TableRow>
                         <TableRow>
                           <TableCell>Description</TableCell>
                           <TableCell>{productViewDialog.product.description || "N/A"}</TableCell>
                         </TableRow>
+                        {productViewDialog.type === "lab" && (
+                          <>
+                            <TableRow>
+                              <TableCell>Sample Required</TableCell>
+                              <TableCell>
+                                {productViewDialog.product.sampleRequired || "N/A"}
+                              </TableCell>
+                            </TableRow>
+                            <TableRow>
+                              <TableCell>Preparations</TableCell>
+                              <TableCell>
+                                {productViewDialog.product.preparations || "N/A"}
+                              </TableCell>
+                            </TableRow>
+                          </>
+                        )}
                       </TableBody>
                     </Table>
                   </TableContainer>
                 </Grid>
                 <Grid item xs={12} md={6}>
-                  {productViewDialog.product.image && (
+                  {(productViewDialog.product.bannerImage ||
+                    productViewDialog.product.coverImage) && (
                     <Box display="flex" justifyContent="center" mt={2}>
                       <Avatar
-                        src={`${baseUrl}${productViewDialog.product.image}`}
-                        alt={productViewDialog.product.productName}
+                        src={
+                          productViewDialog.type === "lab"
+                            ? productViewDialog.product.bannerImage ||
+                              productViewDialog.product.coverImage
+                            : `${baseUrl}${productViewDialog.product.image}`
+                        }
+                        alt={
+                          productViewDialog.type === "lab"
+                            ? productViewDialog.product.testName
+                            : productViewDialog.product.productName
+                        }
                         variant="rounded"
                         sx={{ width: 200, height: 200 }}
                       />

@@ -336,7 +336,7 @@ function Banners() {
         </Box>
       ),
     },
-    { Header: "Link", accessor: "link" },
+    // { Header: "Link", accessor: "link" },
     { Header: "Title", accessor: "title" },
     { Header: "Status", accessor: "status" },
     { Header: "Type", accessor: "type" },
@@ -497,7 +497,7 @@ function Banners() {
                 </MDBox>
               )}
             </Grid>
-            <Grid item xs={12}>
+            {/* <Grid item xs={12}>
               <TextField
                 label="Link"
                 name="link"
@@ -506,7 +506,7 @@ function Banners() {
                 fullWidth
                 margin="normal"
               />
-            </Grid>
+            </Grid> */}
             <Grid item xs={12}>
               <TextField
                 label="Title"
