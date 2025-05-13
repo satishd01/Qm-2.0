@@ -42,6 +42,7 @@ import {
   Close as CloseIcon,
   ArrowBack as ArrowBackIcon,
   ArrowForward as ArrowForwardIcon,
+  Token,
 } from "@mui/icons-material";
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
@@ -172,7 +173,10 @@ function Orders() {
     images: [],
     currentIndex: 0,
   });
-  console.log("Prescription Modal State:", prescriptionModal);
+  const [productsList, setProductsList] = useState([]);
+  console.log("productsList", productsList);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [cancelOrderId, setCancelOrderId] = useState(null);
 
   const baseUrl = process.env.REACT_APP_BASE_URL || "https://quickmeds.sndktech.online";
   const xAuthHeader =
@@ -240,7 +244,7 @@ function Orders() {
       setState((prev) => ({ ...prev, loadingVendors: true }));
       const token = localStorage.getItem("token");
 
-      const response = await fetch(`${baseUrl}/vendor.get`, {
+      const response = await fetch(`${baseUrl}/vendor.get1?vendor_type=Medicine Vendor`, {
         headers: {
           "x-authorization": xAuthHeader,
           Authorization: `Bearer ${token}`,
@@ -270,6 +274,24 @@ function Orders() {
       }));
     }
   }, [baseUrl, xAuthHeader]);
+
+  const fetchProducts = async () => {
+    try {
+      const response = await fetch(`${baseUrl}/product.get`, {
+        method: "get",
+        headers: {
+          "x-authorization": "RGVlcGFrS3-VzaHdhaGE5Mzk5MzY5ODU0-QWxoblBvb2ph",
+          "Content-Type": "application/json",
+        },
+      });
+      const data = await response.json();
+      if (data.status && data.products) {
+        setProductsList(data.products);
+      }
+    } catch (error) {
+      console.error("Failed to fetch products", error);
+    }
+  };
 
   // Fetch users
   const fetchUsers = useCallback(async () => {
@@ -360,6 +382,7 @@ function Orders() {
     fetchOrders();
     fetchVendors();
     fetchUsers();
+    fetchProducts();
   }, [fetchOrderCounts, fetchOrders, fetchVendors, fetchUsers]);
 
   const handleCreateOrder = async () => {
@@ -605,7 +628,7 @@ function Orders() {
                 ...prev,
                 snackbar: {
                   open: true,
-                  message: "File Uploaded successfully!",
+                  message: "Prescription uploaded successfully!",
                   severity: "success",
                 },
                 currentPage: 1,
@@ -651,6 +674,28 @@ function Orders() {
               </label>
             )}
           </Box>
+        );
+      },
+    },
+    {
+      Header: "Cancel Order",
+      accessor: "cancelOrder",
+      Cell: ({ row }) => {
+        const order = row.original;
+
+        const handleOpenCancelDialog = () => {
+          setCancelOrderId(order.id);
+          setCancelDialogOpen(true);
+        };
+
+        return (
+          <IconButton
+            onClick={handleOpenCancelDialog}
+            size="small"
+            disabled={order.status === "Cancelled" || order.status === "Delivered"}
+          >
+            <CancelIcon color="error" />
+          </IconButton>
         );
       },
     },
@@ -898,7 +943,7 @@ function Orders() {
                         <TableCell>{dialogState.currentOrder.user.name}</TableCell>
                       </TableRow>
                       <TableRow>
-                        <TableCell>User ID</TableCell>
+                        <TableCell>User Id</TableCell>
                         <TableCell>{dialogState.currentOrder.user.id}</TableCell>
                       </TableRow>
                       <TableRow>
@@ -908,20 +953,6 @@ function Orders() {
                       <TableRow>
                         <TableCell>Email</TableCell>
                         <TableCell>{dialogState.currentOrder.user?.email || "N/A"}</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell>Address</TableCell>
-                        <TableCell>{dialogState.currentOrder.address}</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell>City/State</TableCell>
-                        <TableCell>
-                          {dialogState.currentOrder.city}, {dialogState.currentOrder.state}
-                        </TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell>Payment Type</TableCell>
-                        <TableCell>{dialogState.currentOrder.PaymentType}</TableCell>
                       </TableRow>
                     </TableBody>
                   </Table>
@@ -1193,7 +1224,7 @@ function Orders() {
                 >
                   {state.vendors.map((vendor) => (
                     <MenuItem key={vendor.id} value={vendor.id}>
-                      {vendor.businessName} ({vendor.businessType})
+                      {vendor.businessName} ({vendor.shop_name})
                     </MenuItem>
                   ))}
                 </Select>
@@ -1272,7 +1303,7 @@ function Orders() {
                   sx={{ width: 350, height: 45 }}
                 >
                   <MenuItem value="Medicine Vendor">Medicine Vendor</MenuItem>
-                  <MenuItem value="Lab Vendor">Lab Vendor</MenuItem>
+                  {/* <MenuItem value="Lab Vendor">Lab Vendor</MenuItem> */}
                 </Select>
               </FormControl>
             </Grid>
@@ -1290,26 +1321,26 @@ function Orders() {
                       </IconButton>
                     )}
                   </Box>
-                  <TextField
-                    margin="dense"
-                    name="productId"
-                    label="Product ID"
-                    fullWidth
-                    variant="outlined"
-                    value={product.productId}
-                    onChange={(e) => handleProductChange(index, "productId", e.target.value)}
-                    sx={{ mt: 1 }}
-                  />
-                  <TextField
-                    margin="dense"
-                    name="productName"
-                    label="Product Name"
-                    fullWidth
-                    variant="outlined"
-                    value={product.productName}
-                    onChange={(e) => handleProductChange(index, "productName", e.target.value)}
-                    sx={{ mt: 1 }}
-                  />
+                  <FormControl fullWidth sx={{ mt: 1 }}>
+                    <InputLabel>Select Product</InputLabel>
+                    <Select
+                      value={product.productId || ""}
+                      label="Select Product"
+                      onChange={(e) => {
+                        const selectedProduct = productsList.find((p) => p.id === e.target.value);
+                        handleProductChange(index, "productId", selectedProduct.id);
+                        handleProductChange(index, "productName", selectedProduct.productName);
+                        handleProductChange(index, "price", selectedProduct.sellingPrice);
+                      }}
+                      sx={{ width: 350, height: 45 }}
+                    >
+                      {productsList.map((prod) => (
+                        <MenuItem key={prod.id} value={prod.id}>
+                          {prod.productName} (₹{prod.sellingPrice})
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
                   <TextField
                     margin="dense"
                     name="quantity"
@@ -1338,7 +1369,7 @@ function Orders() {
                   />
                 </Box>
               ))}
-              <Button variant="outlined" color="primary" onClick={addProductField} sx={{ mt: 1 }}>
+              <Button variant="contained" color="error" onClick={addProductField} sx={{ mt: 1 }}>
                 Add Product
               </Button>
               <Box sx={{ mt: 2 }}>
@@ -1395,6 +1426,60 @@ function Orders() {
           {state.snackbar.message}
         </Alert>
       </Snackbar>
+      {/* cancel order dailog */}
+
+      <Dialog open={cancelDialogOpen} onClose={() => setCancelDialogOpen(false)}>
+        <DialogTitle>Cancel Order</DialogTitle>
+        <DialogContent>Are you sure you want to cancel this order?</DialogContent>
+        <DialogActions>
+          <Button onClick={() => setCancelDialogOpen(false)} color="primary">
+            No
+          </Button>
+          <Button
+            onClick={async () => {
+              try {
+                const response = await fetch(
+                  "https://quickmeds.sndktech.online/adminOrder/cancel",
+                  {
+                    method: "PUT",
+                    headers: {
+                      Authorization: `Bearer ${Token}`,
+                      "x-authorization": "RGVlcGFrS3-VzaHdhaGE5Mzk5MzY5ODU0-QWxoblBvb2ph",
+                      "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                      orderId: cancelOrderId,
+                      finalOrderStatus: "Cancelled",
+                    }),
+                  }
+                );
+                if (response.ok) {
+                  setState((prev) => ({
+                    ...prev,
+                    snackbar: {
+                      open: true,
+                      message: "Order cancelled successfully!",
+                      severity: "success",
+                    },
+                  }));
+                  fetchOrders();
+                } else {
+                  throw new Error("Failed to cancel");
+                }
+              } catch (error) {
+                console.error("Cancel failed", error);
+                alert("Cancellation failed. Please try again.");
+              } finally {
+                setCancelDialogOpen(false);
+                setCancelOrderId(null);
+              }
+            }}
+            color="error"
+          >
+            Yes, Cancel
+          </Button>
+        </DialogActions>
+      </Dialog>
     </DashboardLayout>
   );
 }

@@ -215,6 +215,7 @@ function Products() {
     commission: "",
     compiled_by: "",
     reviewed_by: "",
+    productMg: "",
   });
 
   const baseUrl = process.env.REACT_APP_BASE_URL || "https://quickmeds.sndktech.online";
@@ -540,6 +541,7 @@ function Products() {
         commission: newProduct.commission,
         compiled_by: newProduct.compiled_by,
         reviewed_by: newProduct.reviewed_by,
+        productMg: newProduct.productMg,
       };
 
       const response = await fetch(`${baseUrl}/product.add`, {
@@ -1393,6 +1395,14 @@ function Products() {
                 label="Strength"
                 name="strength"
                 value={newProduct.strength}
+                onChange={handleInputChange}
+                fullWidth
+                margin="normal"
+              />
+              <TextField
+                label="Product MG"
+                name="productMg"
+                value={newProduct.productMg}
                 onChange={handleInputChange}
                 fullWidth
                 margin="normal"

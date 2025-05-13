@@ -1,4 +1,4 @@
-import Dashboard from "layouts/dashboard";
+import Dashboard from "layouts/tables/dashbord";
 import SignIn from "layouts/authentication/sign-in";
 
 // @mui icons

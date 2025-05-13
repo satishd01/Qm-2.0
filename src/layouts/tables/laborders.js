@@ -164,13 +164,15 @@ function Orders() {
     userId: "",
     vendorId: "",
     PaymentType: "COD",
-    vendorType: "Medicine Vendor",
+    vendorType: "Lab Vendor",
   });
   const [prescriptionModal, setPrescriptionModal] = useState({
     open: false,
     images: [],
     currentIndex: 0,
   });
+
+  const [labTestsList, setLabTestsList] = useState([]);
 
   const baseUrl = process.env.REACT_APP_BASE_URL || "https://quickmeds.sndktech.online";
   const xAuthHeader =
@@ -238,7 +240,7 @@ function Orders() {
       setState((prev) => ({ ...prev, loadingVendors: true }));
       const token = localStorage.getItem("token");
 
-      const response = await fetch(`${baseUrl}/vendor.get`, {
+      const response = await fetch(`${baseUrl}/vendor.get1?vendor_type=Lab Vendor`, {
         headers: {
           "x-authorization": xAuthHeader,
           Authorization: `Bearer ${token}`,
@@ -353,12 +355,37 @@ function Orders() {
     }
   }, [state.currentPage, state.selectedStatus, baseUrl, xAuthHeader]);
 
+  const fetchLabTests = useCallback(async () => {
+    try {
+      const token = localStorage.getItem("token");
+
+      const response = await fetch(`${baseUrl}/labTest.get`, {
+        method: "GET",
+        headers: {
+          "x-authorization": xAuthHeader,
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) throw new Error(data?.message || "Failed to fetch lab tests");
+
+      if (data.status && Array.isArray(data.labTests)) {
+        setLabTestsList(data.labTests);
+      }
+    } catch (error) {
+      console.error("Error fetching lab tests:", error);
+    }
+  }, [baseUrl, xAuthHeader]);
+
   useEffect(() => {
     fetchOrderCounts();
     fetchOrders();
     fetchVendors();
     fetchUsers();
-  }, [fetchOrderCounts, fetchOrders, fetchVendors, fetchUsers]);
+    fetchLabTests();
+  }, [fetchOrderCounts, fetchOrders, fetchVendors, fetchUsers, fetchLabTests]);
 
   const handleCreateOrder = async () => {
     try {
@@ -1115,6 +1142,18 @@ function Orders() {
                   ))}
                 </Select>
               </FormControl>
+              <FormControl fullWidth sx={{ mt: 1 }}>
+                <InputLabel>Vendor Type</InputLabel>
+                <Select
+                  value={newOrder.vendorType || "Lab Vendor"}
+                  label="Vendor Type"
+                  onChange={(e) => setNewOrder((prev) => ({ ...prev, vendorType: e.target.value }))}
+                  sx={{ width: 350, height: 45 }}
+                >
+                  {/* <MenuItem value="Medicine Vendor">Medicine Vendor</MenuItem> */}
+                  <MenuItem value="Lab Vendor">Lab Vendor</MenuItem>
+                </Select>
+              </FormControl>
 
               <FormControl fullWidth sx={{ mt: 2 }}>
                 <InputLabel>Select Vendor</InputLabel>
@@ -1127,7 +1166,7 @@ function Orders() {
                 >
                   {state.vendors.map((vendor) => (
                     <MenuItem key={vendor.id} value={vendor.id}>
-                      {vendor.businessName} ({vendor.businessType})
+                      {vendor.businessName} ({vendor.shop_name})
                     </MenuItem>
                   ))}
                 </Select>
@@ -1197,18 +1236,6 @@ function Orders() {
                   <MenuItem value="Online">Online Payment</MenuItem>
                 </Select>
               </FormControl>
-              <FormControl fullWidth sx={{ mt: 1 }}>
-                <InputLabel>Vendor Type</InputLabel>
-                <Select
-                  value={newOrder.vendorType}
-                  label="Vendor Type"
-                  onChange={(e) => setNewOrder((prev) => ({ ...prev, vendorType: e.target.value }))}
-                  sx={{ width: 350, height: 45 }}
-                >
-                  <MenuItem value="Medicine Vendor">Medicine Vendor</MenuItem>
-                  <MenuItem value="Lab Vendor">Lab Vendor</MenuItem>
-                </Select>
-              </FormControl>
             </Grid>
             <Grid item xs={12} md={6}>
               <MDTypography variant="h6" gutterBottom>
@@ -1217,33 +1244,36 @@ function Orders() {
               {newOrder.products.map((product, index) => (
                 <Box key={index} sx={{ mb: 2, p: 1, border: "1px solid #eee", borderRadius: 1 }}>
                   <Box display="flex" justifyContent="space-between" alignItems="center">
-                    <MDTypography variant="subtitle2">Product #{index + 1}</MDTypography>
+                    <MDTypography variant="subtitle2">Lab test #{index + 1}</MDTypography>
                     {index > 0 && (
                       <IconButton size="small" onClick={() => removeProductField(index)}>
                         <DeleteIcon color="error" fontSize="small" />
                       </IconButton>
                     )}
                   </Box>
-                  <TextField
-                    margin="dense"
-                    name="productId"
-                    label="Product ID"
-                    fullWidth
-                    variant="outlined"
-                    value={product.productId}
-                    onChange={(e) => handleProductChange(index, "productId", e.target.value)}
-                    sx={{ mt: 1 }}
-                  />
-                  <TextField
-                    margin="dense"
-                    name="productName"
-                    label="Product Name"
-                    fullWidth
-                    variant="outlined"
-                    value={product.productName}
-                    onChange={(e) => handleProductChange(index, "productName", e.target.value)}
-                    sx={{ mt: 1 }}
-                  />
+                  <FormControl fullWidth sx={{ mt: 1 }}>
+                    <InputLabel>Select Lab Test</InputLabel>
+                    <Select
+                      value={product.productId || ""}
+                      label="Select Lab Test"
+                      onChange={(e) => {
+                        const selectedTest = labTestsList.find(
+                          (test) => test.id === e.target.value
+                        );
+                        handleProductChange(index, "productId", selectedTest.id);
+                        handleProductChange(index, "productName", selectedTest.testName);
+                        handleProductChange(index, "price", selectedTest.sellingPrice);
+                      }}
+                      sx={{ width: 350, height: 40 }}
+                    >
+                      {labTestsList.map((test) => (
+                        <MenuItem key={test.id} value={test.id}>
+                          {test.testName} (₹{test.sellingPrice})
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+
                   <TextField
                     margin="dense"
                     name="quantity"
@@ -1272,7 +1302,7 @@ function Orders() {
                   />
                 </Box>
               ))}
-              <Button variant="outlined" color="primary" onClick={addProductField} sx={{ mt: 1 }}>
+              <Button variant="contained" color="error" onClick={addProductField} sx={{ mt: 1 }}>
                 Add Product
               </Button>
               <Box sx={{ mt: 2 }}>
