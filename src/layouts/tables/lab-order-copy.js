@@ -1,4 +1,3 @@
-/* eslint-disable react/prop-types */
 import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "@mui/material/styles";
@@ -42,8 +41,6 @@ import {
   Close as CloseIcon,
   ArrowBack as ArrowBackIcon,
   ArrowForward as ArrowForwardIcon,
-  PictureAsPdf as PdfIcon,
-  Image as ImageIcon,
 } from "@mui/icons-material";
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
@@ -60,11 +57,12 @@ const Alert = React.forwardRef(function Alert(props, ref) {
 const DEFAULT_PAGE_SIZE = 10;
 const ORDER_STATUSES = [
   "All",
-  "New-Order",
-  "Partially-Accepted",
   "Accepted",
   "Rejected",
   "Delivered",
+  "Pending",
+  "New-Order",
+  "Partially-Accepted",
   "Partially-Delivered",
   "Cart-Accept",
   "call-me-to-modify",
@@ -114,38 +112,6 @@ StatusCell.propTypes = {
   value: PropTypes.string.isRequired,
 };
 
-const FileViewCell = ({ value, type }) => {
-  if (!value) return <Typography variant="body2">N/A</Typography>;
-
-  const isPdf = value.toLowerCase().endsWith(".pdf");
-  const icon = isPdf ? <PdfIcon color="error" /> : <ImageIcon color="error" />;
-
-  return (
-    <Button
-      startIcon={icon}
-      onClick={() =>
-        window.open(
-          `${process.env.REACT_APP_BASE_URL || "https://quickmeds.sndktech.online"}/${value}`,
-          "_blank"
-        )
-      }
-      size="small"
-      variant="contained"
-    >
-      View {type}
-    </Button>
-  );
-};
-
-FileViewCell.propTypes = {
-  value: PropTypes.string,
-  type: PropTypes.string.isRequired,
-};
-
-FileViewCell.defaultProps = {
-  value: null,
-};
-
 function Orders() {
   const navigate = useNavigate();
   const theme = useTheme();
@@ -155,7 +121,7 @@ function Orders() {
     searchTerm: "",
     currentPage: 1,
     totalPages: 1,
-    selectedStatus: "Accepted",
+    selectedStatus: "All",
     snackbar: {
       open: false,
       message: "",
@@ -165,6 +131,22 @@ function Orders() {
     users: [],
     loadingVendors: false,
     loadingUsers: false,
+    // const orderCounts = {
+    //   all: 0,
+    //   accepted: 0,
+    //   rejected: 0,
+    //   delivered: 0,
+    //   pending: 0,
+    //   "New-Order": 0,  // Key with a hyphen - must be in quotes
+    //   "Partially-Accepted": 0,  // Key with a hyphen - must be in quotes
+    //   "Partially-Delivered": 0,  // Key with a hyphen - must be in quotes
+    //   "Cart-Accept": 0,  // Key with a hyphen - must be in quotes
+    //   "call-me-to-modify": 0,  // Key with a hyphen - must be in quotes
+    //   "call-me-to-how-to-take-medicine": 0,  // Key with a hyphen - must be in quotes
+    //   "Cancel-order": 0,  // Key with a hyphen - must be in quotes
+    //   "return-order-request": 0,  // Key with a hyphen - must be in quotes
+    //   "E-Consultation": 0,  // Key with a hyphen - must be in quotes
+    // };
   });
   const [dialogState, setDialogState] = useState({
     viewOpen: false,
@@ -189,15 +171,68 @@ function Orders() {
     images: [],
     currentIndex: 0,
   });
-  const [fileViewerModal, setFileViewerModal] = useState({
-    open: false,
-    url: "",
-    type: "",
-  });
+
+  const [labTestsList, setLabTestsList] = useState([]);
 
   const baseUrl = process.env.REACT_APP_BASE_URL || "https://quickmeds.sndktech.online";
   const xAuthHeader =
     process.env.REACT_APP_X_AUTHORIZATION || "RGVlcGFrS3-VzaHdhaGE5Mzk5MzY5ODU4-QWxoblBvb2ph";
+
+  // Fetch order counts for all statuses
+  const fetchOrderCounts = useCallback(async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+
+      const responses = await Promise.all([
+        fetch(`${baseUrl}/adminOrders1/All?page=1&page_size=1`, {
+          headers: {
+            "x-authorization": xAuthHeader,
+            Authorization: `Bearer ${token}`,
+          },
+        }),
+        fetch(`${baseUrl}/adminOrders1/Accepted?page=1&page_size=1`, {
+          headers: {
+            "x-authorization": xAuthHeader,
+            Authorization: `Bearer ${token}`,
+          },
+        }),
+        fetch(`${baseUrl}/adminOrders1/Rejected?page=1&page_size=1`, {
+          headers: {
+            "x-authorization": xAuthHeader,
+            Authorization: `Bearer ${token}`,
+          },
+        }),
+        fetch(`${baseUrl}/adminOrders1/Delivered?page=1&page_size=1`, {
+          headers: {
+            "x-authorization": xAuthHeader,
+            Authorization: `Bearer ${token}`,
+          },
+        }),
+        fetch(`${baseUrl}/adminOrders1/Pending?page=1&page_size=1`, {
+          headers: {
+            "x-authorization": xAuthHeader,
+            Authorization: `Bearer ${token}`,
+          },
+        }),
+      ]);
+
+      const data = await Promise.all(responses.map((res) => res.json()));
+
+      setState((prev) => ({
+        ...prev,
+        orderCounts: {
+          all: data[0]?.total || 0,
+          accepted: data[1]?.total || 0,
+          rejected: data[2]?.total || 0,
+          delivered: data[3]?.total || 0,
+          pending: data[4]?.total || 0,
+        },
+      }));
+    } catch (error) {
+      console.error("Error fetching order counts:", error);
+    }
+  }, [baseUrl, xAuthHeader]);
 
   // Fetch vendors
   const fetchVendors = useCallback(async () => {
@@ -205,7 +240,7 @@ function Orders() {
       setState((prev) => ({ ...prev, loadingVendors: true }));
       const token = localStorage.getItem("token");
 
-      const response = await fetch(`${baseUrl}/vendor.get`, {
+      const response = await fetch(`${baseUrl}/vendor.get1?vendor_type=Lab Vendor`, {
         headers: {
           "x-authorization": xAuthHeader,
           Authorization: `Bearer ${token}`,
@@ -320,11 +355,37 @@ function Orders() {
     }
   }, [state.currentPage, state.selectedStatus, baseUrl, xAuthHeader]);
 
+  const fetchLabTests = useCallback(async () => {
+    try {
+      const token = localStorage.getItem("token");
+
+      const response = await fetch(`${baseUrl}/labTest.get`, {
+        method: "GET",
+        headers: {
+          "x-authorization": xAuthHeader,
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) throw new Error(data?.message || "Failed to fetch lab tests");
+
+      if (data.status && Array.isArray(data.labTests)) {
+        setLabTestsList(data.labTests);
+      }
+    } catch (error) {
+      console.error("Error fetching lab tests:", error);
+    }
+  }, [baseUrl, xAuthHeader]);
+
   useEffect(() => {
+    fetchOrderCounts();
     fetchOrders();
     fetchVendors();
     fetchUsers();
-  }, [fetchOrders, fetchVendors, fetchUsers]);
+    fetchLabTests();
+  }, [fetchOrderCounts, fetchOrders, fetchVendors, fetchUsers, fetchLabTests]);
 
   const handleCreateOrder = async () => {
     try {
@@ -385,10 +446,11 @@ function Orders() {
         userId: "",
         vendorId: "",
         PaymentType: "COD",
-        vendorType: "Lab Vendor",
+        vendorType: "Medicine Vendor",
       });
       setDialogState((prev) => ({ ...prev, createOpen: false }));
       await fetchOrders();
+      await fetchOrderCounts();
     } catch (error) {
       console.error("Error creating order:", error);
       setState((prev) => ({
@@ -433,6 +495,7 @@ function Orders() {
         },
       }));
       await fetchOrders();
+      await fetchOrderCounts();
     } catch (error) {
       console.error("Error updating order status:", error);
       setState((prev) => ({
@@ -507,22 +570,6 @@ function Orders() {
     }));
   };
 
-  const handleOpenFileViewer = (url, type) => {
-    setFileViewerModal({
-      open: true,
-      url: `${baseUrl}/uploads/${url}`, // prepend baseURL and /uploads/
-      type: type,
-    });
-  };
-
-  const handleCloseFileViewer = () => {
-    setFileViewerModal({
-      open: false,
-      url: "",
-      type: "",
-    });
-  };
-
   const columns = [
     { Header: "Order ID", accessor: "orderId" },
     {
@@ -537,51 +584,41 @@ function Orders() {
       accessor: "createdAt",
       Cell: ({ value }) => new Date(value).toLocaleString(), // Formats to user-friendly date + time
     },
-    // {
-    //   Header: "Status",
-    //   accessor: "status",
-    //   Cell: StatusCell,
-    // },
     {
-      Header: "Invoice",
-      accessor: "invoice",
-      Cell: ({ value }) => <FileViewCell value={value} type="Invoice" />,
+      Header: "Status",
+      accessor: "status",
+      Cell: StatusCell,
     },
     {
-      Header: "Lab Report",
-      accessor: "labReport",
-      Cell: ({ value }) => <FileViewCell value={value} type="Lab Report" />,
+      Header: "Details",
+      accessor: "actions",
+      Cell: ({ row }) => (
+        <Box>
+          <IconButton
+            onClick={() => setDialogState({ viewOpen: true, currentOrder: row.original })}
+            size="small"
+          >
+            <VisibilityIcon color="info" />
+          </IconButton>
+          {row.original.status === "Pending" && (
+            <>
+              <IconButton
+                onClick={() => handleStatusChange(row.original.id, "Accepted")}
+                size="small"
+              >
+                <CheckCircleIcon color="success" />
+              </IconButton>
+              <IconButton
+                onClick={() => handleStatusChange(row.original.id, "Rejected")}
+                size="small"
+              >
+                <CancelIcon color="error" />
+              </IconButton>
+            </>
+          )}
+        </Box>
+      ),
     },
-    // {
-    //   Header: "Actions",
-    //   accessor: "actions",
-    //   Cell: ({ row }) => (
-    //     <Box>
-    //       <IconButton
-    //         onClick={() => setDialogState({ viewOpen: true, currentOrder: row.original })}
-    //         size="small"
-    //       >
-    //         <VisibilityIcon color="info" />
-    //       </IconButton>
-    //       {row.original.status === "Pending" && (
-    //         <>
-    //           <IconButton
-    //             onClick={() => handleStatusChange(row.original.id, "Accepted")}
-    //             size="small"
-    //           >
-    //             <CheckCircleIcon color="success" />
-    //           </IconButton>
-    //           <IconButton
-    //             onClick={() => handleStatusChange(row.original.id, "Rejected")}
-    //             size="small"
-    //           >
-    //             <CancelIcon color="error" />
-    //           </IconButton>
-    //         </>
-    //       )}
-    //     </Box>
-    //   ),
-    // },
   ];
 
   const filteredOrders = state.orders.filter((order) => {
@@ -611,10 +648,125 @@ function Orders() {
     <DashboardLayout>
       <DashboardNavbar />
       <MDBox pt={6} pb={3}>
-        <Grid container spacing={6}>
-          <Grid item xs={12}>
+        <Grid container spacing={3}>
+          {/* Order Count Cards */}
+          <Grid container spacing={2}>
+            {/* Existing cards */}
+            {/* All */}
+            {/* <Grid item xs={12} sm={6} md={2.4}>
+              <Card
+                onClick={() =>
+                  setState((prev) => ({ ...prev, selectedStatus: "All", currentPage: 1 }))
+                }
+                sx={{
+                  cursor: "pointer",
+                  border: state.selectedStatus === "All" ? "2px solid #1976d2" : "none",
+                  height: "100%",
+                  transition: "transform 0.2s",
+                  "&:hover": {
+                    transform: "scale(1.02)",
+                    boxShadow: 3,
+                  },
+                }}
+              >
+                <MDBox p={2} textAlign="center">
+                  <MDTypography variant="h6">All Orders</MDTypography>
+                  <MDTypography variant="h4" color="primary">
+                    {state.orderCounts.all}
+                  </MDTypography>
+                </MDBox>
+              </Card>
+            </Grid> */}
+
+            {/* Repeat similar for others */}
+            {[
+              { label: "All", status: "All", color: "info", borderColor: "#0288d1" },
+              { label: "Accepted", status: "Accepted", color: "success", borderColor: "#2e7d32" },
+              { label: "Rejected", status: "Rejected", color: "error", borderColor: "#d32f2f" },
+              { label: "Delivered", status: "Delivered", color: "success", borderColor: "#2e7d32" },
+              { label: "Pending", status: "Pending", color: "warning", borderColor: "#ed6c02" },
+              { label: "New-Order", status: "New-Order", color: "info", borderColor: "#0288d1" },
+              {
+                label: "Partially-Accepted",
+                status: "Partially-Accepted",
+                color: "info",
+                borderColor: "#0288d1",
+              },
+              {
+                label: "Partially-Delivered",
+                status: "Partially-Delivered",
+                color: "info",
+                borderColor: "#0288d1",
+              },
+              {
+                label: "Cart-Accept",
+                status: "Cart-Accept",
+                color: "secondary",
+                borderColor: "#7b1fa2",
+              },
+              {
+                label: "Call Me To Modify",
+                status: "call-me-to-modify",
+                color: "secondary",
+                borderColor: "#7b1fa2",
+              },
+              {
+                label: "Call Me - How To Take Medicine",
+                status: "call-me-to-how-to-take-medicine",
+                color: "secondary",
+                borderColor: "#7b1fa2",
+              },
+              {
+                label: "Cancel Order",
+                status: "Cancel-order",
+                color: "error",
+                borderColor: "#c62828",
+              },
+              {
+                label: "Return Order Request",
+                status: "return-order-request",
+                color: "warning",
+                borderColor: "#f57c00",
+              },
+              {
+                label: "E-Consultation",
+                status: "E-Consultation",
+                color: "info",
+                borderColor: "#0288d1",
+              },
+            ].map(({ label, status, color, borderColor }) => (
+              <Grid key={status} item xs={1} sm={3} md={2.4}>
+                <Card
+                  onClick={() =>
+                    setState((prev) => ({ ...prev, selectedStatus: status, currentPage: 1 }))
+                  }
+                  sx={{
+                    cursor: "pointer",
+                    border: state.selectedStatus === status ? `2px solid ${borderColor}` : "none",
+                    height: "100%",
+                    transition: "transform 0.2s",
+                    "&:hover": {
+                      transform: "scale(1.02)",
+                      boxShadow: 3,
+                    },
+                  }}
+                >
+                  <MDBox p={2} textAlign="center">
+                    <MDTypography variant="h6">{label}</MDTypography>
+                    <MDTypography variant="h4" color={color}>
+                      {state.orderCounts[status]}
+                    </MDTypography>
+                  </MDBox>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+
+          {/* Main Table */}
+          <Grid item xs={12} mt={2}>
             <Card>
               <MDBox
+                m={1}
                 mx={2}
                 mt={-3}
                 py={3}
@@ -631,29 +783,9 @@ function Orders() {
                   flexWrap="wrap"
                 >
                   <MDTypography variant="h6" color="black">
-                    Lab report and Invoice
+                    {state.selectedStatus === "All" ? "All" : state.selectedStatus} Orders
                   </MDTypography>
                   <MDBox display="flex" gap={2} flexWrap="wrap" alignItems="center">
-                    <FormControl sx={{ minWidth: 150 }} size="small">
-                      <InputLabel>Status</InputLabel>
-                      <Select
-                        value={state.selectedStatus}
-                        label="Status"
-                        onChange={(e) =>
-                          setState((prev) => ({
-                            ...prev,
-                            selectedStatus: e.target.value,
-                            currentPage: 1,
-                          }))
-                        }
-                      >
-                        {ORDER_STATUSES.map((status) => (
-                          <MenuItem key={status} value={status}>
-                            {status}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
                     <TextField
                       label="Search Orders"
                       value={state.searchTerm}
@@ -667,13 +799,13 @@ function Orders() {
                       sx={{ width: 300 }}
                       size="small"
                     />
-                    {/* <Button
+                    <Button
                       variant="contained"
                       color="error"
                       onClick={() => setDialogState((prev) => ({ ...prev, createOpen: true }))}
                     >
                       Create Order
-                    </Button> */}
+                    </Button>
                   </MDBox>
                 </MDBox>
               </MDBox>
@@ -700,7 +832,7 @@ function Orders() {
                     count={state.totalPages}
                     page={state.currentPage}
                     onChange={(_, page) => setState((prev) => ({ ...prev, currentPage: page }))}
-                    color="error"
+                    color="primary"
                   />
                 </MDBox>
               )}
@@ -760,7 +892,7 @@ function Orders() {
                   </Table>
                 </TableContainer>
 
-                {dialogState.currentOrder.prescription?.length > 0 && (
+                {dialogState.currentOrder.prescription && (
                   <Box mt={3}>
                     <MDTypography variant="h6">Prescription</MDTypography>
                     <Button
@@ -773,38 +905,6 @@ function Orders() {
                     >
                       View Prescription Images ({dialogState.currentOrder.prescription.length})
                     </Button>
-                  </Box>
-                )}
-
-                {(dialogState.currentOrder.invoice || dialogState.currentOrder.labReport) && (
-                  <Box mt={3}>
-                    <MDTypography variant="h6">Documents</MDTypography>
-                    <Box display="flex" gap={2} mt={2}>
-                      {dialogState.currentOrder.invoice && (
-                        <Button
-                          color="error"
-                          variant="contained"
-                          startIcon={<PdfIcon />}
-                          onClick={() =>
-                            handleOpenFileViewer(dialogState.currentOrder.invoice, "Invoice")
-                          }
-                        >
-                          View Invoice
-                        </Button>
-                      )}
-                      {dialogState.currentOrder.labReport && (
-                        <Button
-                          color="error"
-                          variant="contained"
-                          startIcon={<PdfIcon />}
-                          onClick={() =>
-                            handleOpenFileViewer(dialogState.currentOrder.labReport, "Lab Report")
-                          }
-                        >
-                          View Lab Report
-                        </Button>
-                      )}
-                    </Box>
                   </Box>
                 )}
               </Grid>
@@ -953,7 +1053,7 @@ function Orders() {
               position: "absolute",
               top: 8,
               right: 8,
-              color: "text.error",
+              color: "text.primary",
             }}
           >
             <CloseIcon />
@@ -976,7 +1076,7 @@ function Orders() {
 
             <Box
               component="img"
-              src={`${baseUrl}/uploads/${prescriptionModal.images[prescriptionModal.currentIndex]}`}
+              src={`${baseUrl}${prescriptionModal.images[prescriptionModal.currentIndex]}`}
               alt={`Prescription ${prescriptionModal.currentIndex + 1}`}
               sx={{
                 maxHeight: "70vh",
@@ -1004,7 +1104,7 @@ function Orders() {
                     width: 10,
                     height: 10,
                     borderRadius: "50%",
-                    bgcolor: index === prescriptionModal.currentIndex ? "error.main" : "grey.500",
+                    bgcolor: index === prescriptionModal.currentIndex ? "primary.main" : "grey.500",
                     mx: 0.5,
                     cursor: "pointer",
                   }}
@@ -1012,81 +1112,6 @@ function Orders() {
               ))}
             </Box>
           )}
-        </Box>
-      </Modal>
-
-      {/* File Viewer Modal */}
-      <Modal
-        open={fileViewerModal.open}
-        onClose={handleCloseFileViewer}
-        aria-labelledby="file-viewer-modal"
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          backdropFilter: "blur(4px)",
-        }}
-      >
-        <Box
-          sx={{
-            position: "relative",
-            width: "90vw",
-            height: "90vh",
-            bgcolor: "background.paper",
-            boxShadow: 24,
-            p: 4,
-            borderRadius: 2,
-            outline: "none",
-            display: "flex",
-            flexDirection: "column",
-          }}
-        >
-          <IconButton
-            onClick={handleCloseFileViewer}
-            sx={{
-              position: "absolute",
-              top: 8,
-              right: 8,
-              color: "text.error",
-            }}
-          >
-            <CloseIcon />
-          </IconButton>
-
-          <Typography variant="h6" gutterBottom>
-            Viewing {fileViewerModal.type}
-          </Typography>
-
-          <Box sx={{ flex: 1, display: "flex", justifyContent: "center", alignItems: "center" }}>
-            {fileViewerModal.url.toLowerCase().endsWith(".pdf") ? (
-              <iframe
-                src={`${baseUrl}${fileViewerModal.url}`}
-                title={fileViewerModal.type}
-                width="100%"
-                height="100%"
-                style={{ border: "none" }}
-              />
-            ) : (
-              <img
-                src={`${baseUrl}${fileViewerModal.url}`}
-                alt={fileViewerModal.type}
-                style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain" }}
-              />
-            )}
-          </Box>
-
-          <Box sx={{ mt: 2, display: "flex", justifyContent: "flex-end" }}>
-            <Button
-              variant="contained"
-              onClick={() => window.open(`${baseUrl}${fileViewerModal.url}`, "_blank")}
-              sx={{ mr: 2 }}
-            >
-              Open in New Tab
-            </Button>
-            <Button variant="outlined" onClick={handleCloseFileViewer}>
-              Close
-            </Button>
-          </Box>
         </Box>
       </Modal>
 
@@ -1112,12 +1137,25 @@ function Orders() {
                   label="Select User"
                   onChange={(e) => setNewOrder((prev) => ({ ...prev, userId: e.target.value }))}
                   disabled={state.loadingUsers}
+                  sx={{ width: 350, height: 45 }}
                 >
                   {state.users.map((user) => (
                     <MenuItem key={user.id} value={user.id}>
                       {user.name} ({user.phone})
                     </MenuItem>
                   ))}
+                </Select>
+              </FormControl>
+              <FormControl fullWidth sx={{ mt: 1 }}>
+                <InputLabel>Vendor Type</InputLabel>
+                <Select
+                  value={newOrder.vendorType || "Lab Vendor"}
+                  label="Vendor Type"
+                  onChange={(e) => setNewOrder((prev) => ({ ...prev, vendorType: e.target.value }))}
+                  sx={{ width: 350, height: 45 }}
+                >
+                  {/* <MenuItem value="Medicine Vendor">Medicine Vendor</MenuItem> */}
+                  <MenuItem value="Lab Vendor">Lab Vendor</MenuItem>
                 </Select>
               </FormControl>
 
@@ -1128,10 +1166,11 @@ function Orders() {
                   label="Select Vendor"
                   onChange={(e) => setNewOrder((prev) => ({ ...prev, vendorId: e.target.value }))}
                   disabled={state.loadingVendors}
+                  sx={{ width: 350, height: 45 }}
                 >
                   {state.vendors.map((vendor) => (
                     <MenuItem key={vendor.id} value={vendor.id}>
-                      {vendor.businessName} ({vendor.businessType})
+                      {vendor.businessName} ({vendor.shop_name})
                     </MenuItem>
                   ))}
                 </Select>
@@ -1195,20 +1234,10 @@ function Orders() {
                   onChange={(e) =>
                     setNewOrder((prev) => ({ ...prev, PaymentType: e.target.value }))
                   }
+                  sx={{ width: 350, height: 45 }}
                 >
                   <MenuItem value="COD">Cash on Delivery</MenuItem>
                   <MenuItem value="Online">Online Payment</MenuItem>
-                </Select>
-              </FormControl>
-              <FormControl fullWidth sx={{ mt: 1 }}>
-                <InputLabel>Vendor Type</InputLabel>
-                <Select
-                  value={newOrder.vendorType}
-                  label="Vendor Type"
-                  onChange={(e) => setNewOrder((prev) => ({ ...prev, vendorType: e.target.value }))}
-                >
-                  <MenuItem value="Medicine Vendor">Medicine Vendor</MenuItem>
-                  <MenuItem value="Lab Vendor">Lab Vendor</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
@@ -1219,33 +1248,36 @@ function Orders() {
               {newOrder.products.map((product, index) => (
                 <Box key={index} sx={{ mb: 2, p: 1, border: "1px solid #eee", borderRadius: 1 }}>
                   <Box display="flex" justifyContent="space-between" alignItems="center">
-                    <MDTypography variant="subtitle2">Product #{index + 1}</MDTypography>
+                    <MDTypography variant="subtitle2">Lab test #{index + 1}</MDTypography>
                     {index > 0 && (
                       <IconButton size="small" onClick={() => removeProductField(index)}>
                         <DeleteIcon color="error" fontSize="small" />
                       </IconButton>
                     )}
                   </Box>
-                  <TextField
-                    margin="dense"
-                    name="productId"
-                    label="Product ID"
-                    fullWidth
-                    variant="outlined"
-                    value={product.productId}
-                    onChange={(e) => handleProductChange(index, "productId", e.target.value)}
-                    sx={{ mt: 1 }}
-                  />
-                  <TextField
-                    margin="dense"
-                    name="productName"
-                    label="Product Name"
-                    fullWidth
-                    variant="outlined"
-                    value={product.productName}
-                    onChange={(e) => handleProductChange(index, "productName", e.target.value)}
-                    sx={{ mt: 1 }}
-                  />
+                  <FormControl fullWidth sx={{ mt: 1 }}>
+                    <InputLabel>Select Lab Test</InputLabel>
+                    <Select
+                      value={product.productId || ""}
+                      label="Select Lab Test"
+                      onChange={(e) => {
+                        const selectedTest = labTestsList.find(
+                          (test) => test.id === e.target.value
+                        );
+                        handleProductChange(index, "productId", selectedTest.id);
+                        handleProductChange(index, "productName", selectedTest.testName);
+                        handleProductChange(index, "price", selectedTest.sellingPrice);
+                      }}
+                      sx={{ width: 350, height: 40 }}
+                    >
+                      {labTestsList.map((test) => (
+                        <MenuItem key={test.id} value={test.id}>
+                          {test.testName} (₹{test.sellingPrice})
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+
                   <TextField
                     margin="dense"
                     name="quantity"
@@ -1274,7 +1306,7 @@ function Orders() {
                   />
                 </Box>
               ))}
-              <Button variant="outlined" color="error" onClick={addProductField} sx={{ mt: 1 }}>
+              <Button variant="contained" color="error" onClick={addProductField} sx={{ mt: 1 }}>
                 Add Product
               </Button>
               <Box sx={{ mt: 2 }}>

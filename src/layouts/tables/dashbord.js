@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Card,
@@ -6,12 +6,12 @@ import {
   Switch,
   FormControlLabel,
   CircularProgress,
-  Paper,
   Tabs,
   Tab,
   Box,
   IconButton,
 } from "@mui/material";
+import { keyframes, styled } from "@mui/system";
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import Footer from "examples/Footer";
@@ -52,11 +52,33 @@ const periodOptions = [
   { value: "yearly", label: "Yearly" },
 ];
 
+// Enhanced blinking animation
+const blink = keyframes`
+  0% { opacity: 1; box-shadow: 0 0 0 0 rgba(255, 99, 132, 0.7); }
+  50% { opacity: 0.7; box-shadow: 0 0 10px 5px rgba(255, 99, 132, 0.7); }
+  100% { opacity: 1; box-shadow: 0 0 0 0 rgba(255, 99, 132, 0.7); }
+`;
+
+const AnimatedCard = styled(Card, {
+  shouldForwardProp: (prop) => prop !== "highlight",
+})(({ highlight, theme }) => ({
+  cursor: "pointer",
+  height: "100%",
+  transition: "all 0.3s ease",
+  animation: highlight ? `${blink} 1s infinite` : "none",
+  "&:hover": {
+    transform: "scale(1.02)",
+    boxShadow: theme.shadows[6],
+  },
+}));
+
 function OrdersDashboard() {
   const navigate = useNavigate();
   const [showGraphicalView, setShowGraphicalView] = useState(false);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
+    totalOrders: 0,
+    totalTestBookings: 0,
     medicineOrders: {
       newOrders: 0,
       pendingOrders: 0,
@@ -88,6 +110,17 @@ function OrdersDashboard() {
     startDate: "",
     endDate: "",
   });
+  const [highlightCards, setHighlightCards] = useState({
+    medicineNew: false,
+    labNew: false,
+  });
+
+  const prevStatsRef = useRef({
+    totalOrders: null,
+    totalTestBookings: null,
+  });
+
+  const isInitialMount = useRef(true); // Track initial mount
 
   const baseUrl = "https://quickmeds.sndktech.online";
   const xAuthHeader = "RGVlcGFrS3-VzaHdhaGE5Mzk5MzY5ODU0-QWxoblBvb2ph";
@@ -125,7 +158,9 @@ function OrdersDashboard() {
       const paymentsData = await paymentsResponse.json();
 
       if (ordersData.status && paymentsData.status) {
-        setStats({
+        const newStats = {
+          totalOrders: ordersData.data.totalOrders,
+          totalTestBookings: ordersData.data.totalTestBookings,
           medicineOrders: {
             newOrders: ordersData.data.statusCounts.newOrders,
             pendingOrders: ordersData.data.statusCounts.pendingOrders,
@@ -145,13 +180,35 @@ function OrdersDashboard() {
             callToModifyOrders: ordersData.data.testBookingStatusCounts.callToModifyTestBookings,
             uploadedReports: ordersData.data.totalLabReportUploads,
             uploadedInvoices: ordersData.data.totalUploadedInvoices,
+            healthInsuranceCount: ordersData.data.others?.healthInsuranceCount || 0,
+            donateCount: ordersData.data.others?.donateCount || 0,
           },
           payments: {
             data: paymentsData.data,
             totalAmount: paymentsData.totalAmount,
             totalTransactions: paymentsData.total,
           },
-        });
+        };
+
+        console.log("Fetched stats:", newStats.totalOrders);
+        console.log("prevStatsRef:", prevStatsRef.current.totalOrders);
+        // Check for new medicine orders (totalOrders increased)
+        if (newStats.totalOrders > prevStatsRef.current.totalOrders) {
+          setHighlightCards((prev) => ({ ...prev, medicineNew: true }));
+          setTimeout(() => setHighlightCards((prev) => ({ ...prev, medicineNew: false })), 5000);
+        }
+
+        // Check for new lab orders (totalTestBookings increased)
+        if (newStats.totalTestBookings > prevStatsRef.current.totalTestBookings) {
+          setHighlightCards((prev) => ({ ...prev, labNew: true }));
+          setTimeout(() => setHighlightCards((prev) => ({ ...prev, labNew: false })), 5000);
+        }
+
+        setStats(newStats);
+        prevStatsRef.current = {
+          totalOrders: newStats.totalOrders,
+          totalTestBookings: newStats.totalTestBookings,
+        };
       }
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -162,6 +219,11 @@ function OrdersDashboard() {
 
   useEffect(() => {
     fetchData();
+
+    // Set up polling every 30 seconds
+    const intervalId = setInterval(fetchData, 30000);
+
+    return () => clearInterval(intervalId);
   }, [paymentPeriod, showDateFilter, dateRange]);
 
   const handleNavigate = (status) => {
@@ -193,98 +255,109 @@ function OrdersDashboard() {
     setPaymentPeriod("monthly");
     setDateRange({ startDate: "", endDate: "" });
     setShowDateFilter(false);
-    // No need to call fetchData here as the useEffect will trigger it
   };
 
   // Data for charts
-  const medicineOrderData = {
-    labels: [
-      "New",
-      "Pending",
-      "Completed",
-      "Partial",
-      "Modify",
-      "Return",
-      "How to Take",
-      "E-Consult",
-    ],
-    datasets: [
-      {
-        label: "Medicine Orders",
-        data: [
-          stats.medicineOrders.newOrders,
-          stats.medicineOrders.pendingOrders,
-          stats.medicineOrders.completedOrders,
-          stats.medicineOrders.partiallyDeliveredOrders,
-          stats.medicineOrders.callToModifyOrders,
-          stats.medicineOrders.returnOrderRequests,
-          stats.medicineOrders.howToTakeMedicineOrders,
-          stats.medicineOrders.eConsultationOrders,
-        ],
-        backgroundColor: [
-          "#FF6384",
-          "#36A2EB",
-          "#FFCE56",
-          "#4BC0C0",
-          "#9966FF",
-          "#FF9F40",
-          "#8AC24A",
-          "#607D8B",
-        ],
-      },
-    ],
-  };
+  const medicineOrderData = useMemo(
+    () => ({
+      labels: [
+        "New",
+        "Pending",
+        "Completed",
+        "Partial",
+        "Modify",
+        "Return",
+        "How to Take",
+        "E-Consult",
+      ],
+      datasets: [
+        {
+          label: "Medicine Orders",
+          data: [
+            stats.medicineOrders.newOrders,
+            stats.medicineOrders.pendingOrders,
+            stats.medicineOrders.completedOrders,
+            stats.medicineOrders.partiallyDeliveredOrders,
+            stats.medicineOrders.callToModifyOrders,
+            stats.medicineOrders.returnOrderRequests,
+            stats.medicineOrders.howToTakeMedicineOrders,
+            stats.medicineOrders.eConsultationOrders,
+          ],
+          backgroundColor: [
+            "#FF6384",
+            "#36A2EB",
+            "#FFCE56",
+            "#4BC0C0",
+            "#9966FF",
+            "#FF9F40",
+            "#8AC24A",
+            "#607D8B",
+          ],
+        },
+      ],
+    }),
+    [stats.medicineOrders]
+  );
 
-  const labOrderData = {
-    labels: ["New", "Pending", "Completed", "Partial", "Modify", "Reports", "Invoices"],
-    datasets: [
-      {
-        label: "Lab Orders",
-        data: [
-          stats.labOrders.newOrders,
-          stats.labOrders.pendingOrders,
-          stats.labOrders.completedOrders,
-          stats.labOrders.partiallyDeliveredOrders,
-          stats.labOrders.callToModifyOrders,
-          stats.labOrders.uploadedReports,
-          stats.labOrders.uploadedInvoices,
-        ],
-        backgroundColor: [
-          "#FF6384",
-          "#36A2EB",
-          "#FFCE56",
-          "#4BC0C0",
-          "#9966FF",
-          "#FF9F40",
-          "#8AC24A",
-        ],
-      },
-    ],
-  };
+  const labOrderData = useMemo(
+    () => ({
+      labels: ["New", "Pending", "Completed", "Partial", "Modify", "Reports", "Invoices"],
+      datasets: [
+        {
+          label: "Lab Orders",
+          data: [
+            stats.labOrders.newOrders,
+            stats.labOrders.pendingOrders,
+            stats.labOrders.completedOrders,
+            stats.labOrders.partiallyDeliveredOrders,
+            stats.labOrders.callToModifyOrders,
+            stats.labOrders.uploadedReports,
+            stats.labOrders.uploadedInvoices,
+          ],
+          backgroundColor: [
+            "#FF6384",
+            "#36A2EB",
+            "#FFCE56",
+            "#4BC0C0",
+            "#9966FF",
+            "#FF9F40",
+            "#8AC24A",
+          ],
+        },
+      ],
+    }),
+    [stats.labOrders]
+  );
 
-  const paymentData = {
-    labels: stats.payments.data.map((payment) => payment.orderId || "N/A"),
-    datasets: [
-      {
-        label: "Payment Amount",
-        data: stats.payments.data.map((payment) => payment.amount),
-        backgroundColor: "#4BC0C0",
-        borderColor: "#4BC0C0",
-        tension: 0.1,
-      },
-    ],
-  };
+  const paymentData = useMemo(
+    () => ({
+      labels: stats.payments.data.map((payment) => payment.orderId || "N/A"),
+      datasets: [
+        {
+          label: "Payment Amount",
+          data: stats.payments.data.map((payment) => payment.amount),
+          backgroundColor: "#4BC0C0",
+          borderColor: "#4BC0C0",
+          tension: 0.1,
+        },
+      ],
+    }),
+    [stats.payments.data]
+  );
 
   // Payment table columns
-  const paymentColumns = [
-    { Header: "Order ID", accessor: "orderId", width: "25%" },
-    { Header: "Amount", accessor: "amount", width: "25%" },
-    { Header: "Payment Method", accessor: "transactionType", width: "25%" },
-  ];
+  const paymentColumns = useMemo(
+    () => [
+      { Header: "Order ID", accessor: "orderId", width: "25%" },
+      { Header: "Amount", accessor: "amount", width: "25%" },
+      { Header: "Payment Method", accessor: "transactionType", width: "25%" },
+    ],
+    []
+  );
 
   // Format payment data for table
-  const paymentTableData = useMemo(() => {
-    return {
+  const paymentTableData = useMemo(
+    () => ({
       columns: paymentColumns,
       rows: stats.payments.data.map((payment) => ({
         orderId: payment.orderId || "N/A",
@@ -292,10 +365,11 @@ function OrdersDashboard() {
         date: payment.date,
         method: payment.method || "Unknown",
       })),
-    };
-  }, [stats.payments.data]);
+    }),
+    [stats.payments.data, paymentColumns]
+  );
 
-  if (loading) {
+  if (loading && !prevStatsRef.current.totalOrders) {
     return (
       <DashboardLayout>
         <DashboardNavbar />
@@ -499,75 +573,147 @@ function OrdersDashboard() {
               {/* Medicine Orders Section */}
               <Grid item xs={12}>
                 <MDTypography variant="h4" textAlign="left" mb={2} ml={2}>
-                  Medicine Orders
+                  Medicine Orders (Total: {stats.totalOrders})
                 </MDTypography>
               </Grid>
 
               {[
-                { label: "New Orders", value: stats.medicineOrders.newOrders },
-                { label: "Pending Orders", value: stats.medicineOrders.pendingOrders },
-                { label: "Completed Orders", value: stats.medicineOrders.completedOrders },
-                { label: "Partial Orders", value: stats.medicineOrders.partiallyDeliveredOrders },
-                { label: "Call To Modify", value: stats.medicineOrders.callToModifyOrders },
-                { label: "Return Requests", value: stats.medicineOrders.returnOrderRequests },
+                { label: "New Orders", value: stats.medicineOrders.newOrders, key: "newOrders" },
+                {
+                  label: "Pending Orders",
+                  value: stats.medicineOrders.pendingOrders,
+                  key: "pendingOrders",
+                },
+                {
+                  label: "Completed Orders",
+                  value: stats.medicineOrders.completedOrders,
+                  key: "completedOrders",
+                },
+                {
+                  label: "Partial Orders",
+                  value: stats.medicineOrders.partiallyDeliveredOrders,
+                  key: "partiallyDeliveredOrders",
+                },
+                {
+                  label: "Call To Modify",
+                  value: stats.medicineOrders.callToModifyOrders,
+                  key: "callToModifyOrders",
+                },
+                {
+                  label: "Return Requests",
+                  value: stats.medicineOrders.returnOrderRequests,
+                  key: "returnOrderRequests",
+                },
                 {
                   label: "How To Take Medicine",
                   value: stats.medicineOrders.howToTakeMedicineOrders,
+                  key: "howToTakeMedicineOrders",
                 },
-                { label: "E-Consultation", value: stats.medicineOrders.eConsultationOrders },
-              ].map((item, index) => (
-                <Grid item xs={12} md={3} key={`medicine-${index}`}>
-                  <Card
+                {
+                  label: "E-Consultation",
+                  value: stats.medicineOrders.eConsultationOrders,
+                  key: "eConsultationOrders",
+                },
+              ].map((item) => (
+                <Grid item xs={12} md={3} key={`medicine-${item.key}`}>
+                  <AnimatedCard
                     onClick={() => handleNavigate("medicine-order")}
-                    sx={{ cursor: "pointer", height: "100%" }}
+                    highlight={highlightCards.medicineNew && item.key === "newOrders"}
                   >
                     <MDBox p={2} display="flex" justifyContent="space-between" alignItems="center">
                       <MDTypography variant="h6">{item.label}</MDTypography>
-                      <MDTypography variant="h4" color="primary">
+                      <MDTypography
+                        variant="h4"
+                        color={
+                          highlightCards.medicineNew && item.key === "newOrders"
+                            ? "error"
+                            : "primary"
+                        }
+                      >
                         {item.value}
                       </MDTypography>
                     </MDBox>
-                  </Card>
+                  </AnimatedCard>
                 </Grid>
               ))}
 
               {/* Lab Orders Section */}
               <Grid item xs={12} mt={4}>
                 <MDTypography variant="h4" textAlign="left" mb={2} ml={2}>
-                  Lab Orders
+                  Lab Orders (Total: {stats.totalTestBookings})
                 </MDTypography>
               </Grid>
 
               {[
-                { label: "New Orders", value: stats.labOrders.newOrders },
-                { label: "Pending Orders", value: stats.labOrders.pendingOrders },
-                { label: "Completed Orders", value: stats.labOrders.completedOrders },
-                { label: "Partial Orders", value: stats.labOrders.partiallyDeliveredOrders },
-                { label: "Call To Modify", value: stats.labOrders.callToModifyOrders },
-                { label: "Uploaded Reports", value: stats.labOrders.uploadedReports },
-                { label: "Uploaded Invoices", value: stats.labOrders.uploadedInvoices },
-                { label: "Health Insurance", value: stats.labOrders.uploadedInvoices },
-              ].map((item, index) => (
-                <Grid item xs={12} md={3} key={`lab-${index}`}>
-                  <Card
+                { label: "New Orders", value: stats.labOrders.newOrders, key: "newOrders" },
+                {
+                  label: "Pending Orders",
+                  value: stats.labOrders.pendingOrders,
+                  key: "pendingOrders",
+                },
+                {
+                  label: "Completed Orders",
+                  value: stats.labOrders.completedOrders,
+                  key: "completedOrders",
+                },
+                {
+                  label: "Partial Orders",
+                  value: stats.labOrders.partiallyDeliveredOrders,
+                  key: "partiallyDeliveredOrders",
+                },
+                {
+                  label: "Call To Modify",
+                  value: stats.labOrders.callToModifyOrders,
+                  key: "callToModifyOrders",
+                },
+                {
+                  label: "Uploaded Reports",
+                  value: stats.labOrders.uploadedReports,
+                  key: "uploadedReports",
+                },
+                {
+                  label: "Uploaded Invoices",
+                  value: stats.labOrders.uploadedInvoices,
+                  key: "uploadedInvoices",
+                },
+                {
+                  label: "Health Insurance",
+                  value: stats.labOrders.healthInsuranceCount,
+                  key: "healthInsurance",
+                },
+                {
+                  label: "Donation",
+                  value: stats.labOrders.donateCount,
+                  key: "donation",
+                },
+              ].map((item) => (
+                <Grid item xs={12} md={3} key={`lab-${item.key}`}>
+                  <AnimatedCard
                     onClick={() =>
                       handleNavigate(
-                        item.label === "Uploaded Reports" || item.label === "Uploaded Invoices"
+                        item.key === "uploadedReports" || item.key === "uploadedInvoices"
                           ? "report"
-                          : item.label === "Health Insurance"
+                          : item.key === "healthInsurance"
                             ? "health-insurance"
-                            : "lab-order"
+                            : item.key === "donation"
+                              ? "donation"
+                              : "lab-order"
                       )
                     }
-                    sx={{ cursor: "pointer", height: "100%" }}
+                    highlight={highlightCards.labNew && item.key === "newOrders"}
                   >
                     <MDBox p={2} display="flex" justifyContent="space-between" alignItems="center">
                       <MDTypography variant="h6">{item.label}</MDTypography>
-                      <MDTypography variant="h4" color="primary">
+                      <MDTypography
+                        variant="h4"
+                        color={
+                          highlightCards.labNew && item.key === "newOrders" ? "error" : "primary"
+                        }
+                      >
                         {item.value}
                       </MDTypography>
                     </MDBox>
-                  </Card>
+                  </AnimatedCard>
                 </Grid>
               ))}
 

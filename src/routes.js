@@ -28,6 +28,7 @@ import PaymentTransactions from "layouts/tables/accountsection";
 import LabOrders from "layouts/tables/laborders";
 import AskQuestions from "layouts/tables/askquestion";
 import Tips from "layouts/tables/tips";
+import Donations from "layouts/tables/donation";
 
 const routes = [
   {
@@ -109,6 +110,14 @@ const routes = [
     icon: <Icon fontSize="small">account_balance_wallet</Icon>, // account_balance_wallet icon for charges
     route: "/health-insurance",
     component: <InsurancePlansManagement />,
+  },
+  {
+    type: "collapse",
+    name: "Donation",
+    key: "Donation",
+    icon: <Icon fontSize="small">account_balance_wallet</Icon>, // account_balance_wallet icon for charges
+    route: "/donation",
+    component: <Donations />,
   },
   {
     type: "collapse",

@@ -54,7 +54,7 @@ function Packages() {
   const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState([]);
   const [labTests, setLabTests] = useState([]);
-  const [types] = useState(["medicine vendor", "lab vendor"]);
+  const [types] = useState(["lab vendor"]);
 
   // Package management states
   const [packageDialog, setPackageDialog] = useState({
@@ -68,7 +68,7 @@ function Packages() {
     open: false,
     packageId: null,
     type: "",
-    productIds: [],
+    labTestIdss: [],
   });
 
   // Product data viewing state
@@ -270,7 +270,7 @@ function Packages() {
 
       if (
         !packageDataDialog.packageId ||
-        packageDataDialog.productIds.length === 0 ||
+        packageDataDialog.labTestIdss.length === 0 ||
         !packageDataDialog.type
       ) {
         showSnackbar("Please fill all required fields", "error");
@@ -286,7 +286,7 @@ function Packages() {
         },
         body: JSON.stringify({
           packageId: packageDataDialog.packageId,
-          productId: packageDataDialog.productIds,
+          labTestIds: packageDataDialog.labTestIdss,
           type: packageDataDialog.type,
         }),
       });
@@ -295,7 +295,7 @@ function Packages() {
 
       if (response.ok) {
         showSnackbar(data.message || "Package data added successfully!", "success");
-        setPackageDataDialog({ ...packageDataDialog, open: false, productIds: [], type: "" });
+        setPackageDataDialog({ ...packageDataDialog, open: false, labTestIdss: [], type: "" });
         fetchPackages();
       } else {
         showSnackbar(data.message || "Failed to add package data", "error");
@@ -312,13 +312,13 @@ function Packages() {
     const { value } = event.target;
     setPackageDataDialog({
       ...packageDataDialog,
-      productIds: typeof value === "string" ? value.split(",") : value,
+      labTestIdss: typeof value === "string" ? value.split(",") : value,
     });
   };
 
-  const handleViewProduct = (productId, type) => {
+  const handleViewProduct = (labTestIds, type) => {
     if (type === "medicine vendor") {
-      const product = products.find((p) => p.id === productId);
+      const product = products.find((p) => p.id === labTestIds);
       if (product) {
         setProductViewDialog({
           open: true,
@@ -327,7 +327,7 @@ function Packages() {
         });
       }
     } else if (type === "lab vendor") {
-      const test = labTests.find((t) => t.id === productId);
+      const test = labTests.find((t) => t.id === labTestIds);
       if (test) {
         setProductViewDialog({
           open: true,
@@ -366,7 +366,7 @@ function Packages() {
                 open: true,
                 packageId: row.original.id,
                 type: "",
-                productIds: [],
+                labTestIdss: [],
               })
             }
           >
@@ -487,7 +487,7 @@ function Packages() {
                 setPackageDataDialog({
                   ...packageDataDialog,
                   type: e.target.value,
-                  productIds: [], // Reset product selection when type changes
+                  labTestIdss: [], // Reset product selection when type changes
                 })
               }
               label="Vendor Type"
@@ -514,7 +514,7 @@ function Packages() {
             </InputLabel>
             <Select
               multiple
-              value={packageDataDialog.productIds}
+              value={packageDataDialog.labTestIdss}
               onChange={handleProductSelection}
               renderValue={(selected) => (
                 <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
@@ -534,7 +534,7 @@ function Packages() {
                         onDelete={() =>
                           setPackageDataDialog({
                             ...packageDataDialog,
-                            productIds: packageDataDialog.productIds.filter((pId) => pId !== id),
+                            labTestIdss: packageDataDialog.labTestIdss.filter((pId) => pId !== id),
                           })
                         }
                       />
@@ -554,7 +554,7 @@ function Packages() {
               {packageDataDialog.type === "lab vendor"
                 ? labTests.map((test) => (
                     <MenuItem key={test.id} value={test.id}>
-                      <Checkbox checked={packageDataDialog.productIds.indexOf(test.id) > -1} />
+                      <Checkbox checked={packageDataDialog.labTestIdss.indexOf(test.id) > -1} />
                       <ListItemText
                         primary={test.testName}
                         secondary={
@@ -578,7 +578,7 @@ function Packages() {
                   ))
                 : products.map((product) => (
                     <MenuItem key={product.id} value={product.id}>
-                      <Checkbox checked={packageDataDialog.productIds.indexOf(product.id) > -1} />
+                      <Checkbox checked={packageDataDialog.labTestIdss.indexOf(product.id) > -1} />
                       <ListItemText
                         primary={product.productName}
                         secondary={
@@ -593,7 +593,7 @@ function Packages() {
                               <VisibilityIcon fontSize="small" />
                             </IconButton>
                             <Typography variant="caption">
-                              {product.productId} | ₹{product.price}
+                              {product.labTestIds} | ₹{product.price}
                             </Typography>
                           </Box>
                         }
@@ -611,7 +611,7 @@ function Packages() {
             variant="contained"
             color="error"
             onClick={handleAddPackageData}
-            disabled={!packageDataDialog.type || packageDataDialog.productIds.length === 0}
+            disabled={!packageDataDialog.type || packageDataDialog.labTestIdss.length === 0}
           >
             Add Selected {packageDataDialog.type === "lab vendor" ? "Tests" : "Products"}
           </Button>
@@ -644,7 +644,7 @@ function Packages() {
                           <TableCell>
                             {productViewDialog.type === "lab"
                               ? productViewDialog.product.id
-                              : productViewDialog.product.productId}
+                              : productViewDialog.product.labTestIds}
                           </TableCell>
                         </TableRow>
                         <TableRow>

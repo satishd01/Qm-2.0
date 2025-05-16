@@ -1721,7 +1721,7 @@ function Products() {
                 }
                 label="Get Notified"
               />
-              <FormControlLabel
+              {/* <FormControlLabel
                 control={
                   <Switch
                     name="discount_offered"
@@ -1730,8 +1730,8 @@ function Products() {
                   />
                 }
                 label="Discount Offered"
-              />
-              <FormControlLabel
+              /> */}
+              {/* <FormControlLabel
                 control={
                   <Switch
                     name="call_me_to_modify"
@@ -1740,8 +1740,8 @@ function Products() {
                   />
                 }
                 label="Call Me to Modify"
-              />
-              <FormControlLabel
+              /> */}
+              {/* <FormControlLabel
                 control={
                   <Switch
                     name="how_to_take_medicine"
@@ -1750,7 +1750,7 @@ function Products() {
                   />
                 }
                 label="How to Take Medicine"
-              />
+              /> */}
             </Grid>
           </Grid>
         </DialogContent>

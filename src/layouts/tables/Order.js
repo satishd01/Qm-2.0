@@ -173,6 +173,7 @@ function Orders() {
     images: [],
     currentIndex: 0,
   });
+  console.log("prescriptionModal", prescriptionModal);
   const [productsList, setProductsList] = useState([]);
   console.log("productsList", productsList);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
@@ -577,7 +578,11 @@ function Orders() {
     },
     // { Header: "Address", accessor: "address" },
     { Header: "Amount", accessor: "amount" },
-    { Header: "Order Date", accessor: "createdAt" },
+    {
+      Header: "Order Date",
+      accessor: "createdAt",
+      Cell: ({ value }) => new Date(value).toLocaleString(), // Formats to user-friendly date + time
+    },
     {
       Header: "Status",
       accessor: "status",
@@ -620,8 +625,8 @@ function Orders() {
                   "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
-                  status: "E-Consultation",
-                  prescription: uploadedFileName,
+                  status: "New-Order",
+                  prescription: [`/uploads/${uploadedFileName}`],
                 }),
               });
               setState((prev) => ({
@@ -633,6 +638,7 @@ function Orders() {
                 },
                 currentPage: 1,
               }));
+              fetchOrders();
             }
           } catch (error) {
             console.error("Upload failed", error);

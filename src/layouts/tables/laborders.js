@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "@mui/material/styles";
 import PropTypes from "prop-types";
+import UploadIcon from "@mui/icons-material/Upload";
 import {
   Grid,
   Card,
@@ -41,6 +42,7 @@ import {
   Close as CloseIcon,
   ArrowBack as ArrowBackIcon,
   ArrowForward as ArrowForwardIcon,
+  Token,
 } from "@mui/icons-material";
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
@@ -171,8 +173,11 @@ function Orders() {
     images: [],
     currentIndex: 0,
   });
-
-  const [labTestsList, setLabTestsList] = useState([]);
+  console.log("prescriptionModal", prescriptionModal);
+  const [productsList, setProductsList] = useState([]);
+  console.log("productsList", productsList);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [cancelOrderId, setCancelOrderId] = useState(null);
 
   const baseUrl = process.env.REACT_APP_BASE_URL || "https://quickmeds.sndktech.online";
   const xAuthHeader =
@@ -240,7 +245,7 @@ function Orders() {
       setState((prev) => ({ ...prev, loadingVendors: true }));
       const token = localStorage.getItem("token");
 
-      const response = await fetch(`${baseUrl}/vendor.get1?vendor_type=Lab Vendor`, {
+      const response = await fetch(`${baseUrl}/vendor.get1?vendor_type=Medicine Vendor`, {
         headers: {
           "x-authorization": xAuthHeader,
           Authorization: `Bearer ${token}`,
@@ -270,6 +275,24 @@ function Orders() {
       }));
     }
   }, [baseUrl, xAuthHeader]);
+
+  const fetchProducts = async () => {
+    try {
+      const response = await fetch(`${baseUrl}/product.get`, {
+        method: "get",
+        headers: {
+          "x-authorization": "RGVlcGFrS3-VzaHdhaGE5Mzk5MzY5ODU0-QWxoblBvb2ph",
+          "Content-Type": "application/json",
+        },
+      });
+      const data = await response.json();
+      if (data.status && data.products) {
+        setProductsList(data.products);
+      }
+    } catch (error) {
+      console.error("Failed to fetch products", error);
+    }
+  };
 
   // Fetch users
   const fetchUsers = useCallback(async () => {
@@ -355,37 +378,13 @@ function Orders() {
     }
   }, [state.currentPage, state.selectedStatus, baseUrl, xAuthHeader]);
 
-  const fetchLabTests = useCallback(async () => {
-    try {
-      const token = localStorage.getItem("token");
-
-      const response = await fetch(`${baseUrl}/labTest.get`, {
-        method: "GET",
-        headers: {
-          "x-authorization": xAuthHeader,
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) throw new Error(data?.message || "Failed to fetch lab tests");
-
-      if (data.status && Array.isArray(data.labTests)) {
-        setLabTestsList(data.labTests);
-      }
-    } catch (error) {
-      console.error("Error fetching lab tests:", error);
-    }
-  }, [baseUrl, xAuthHeader]);
-
   useEffect(() => {
     fetchOrderCounts();
     fetchOrders();
     fetchVendors();
     fetchUsers();
-    fetchLabTests();
-  }, [fetchOrderCounts, fetchOrders, fetchVendors, fetchUsers, fetchLabTests]);
+    fetchProducts();
+  }, [fetchOrderCounts, fetchOrders, fetchVendors, fetchUsers]);
 
   const handleCreateOrder = async () => {
     try {
@@ -446,7 +445,7 @@ function Orders() {
         userId: "",
         vendorId: "",
         PaymentType: "COD",
-        vendorType: "Medicine Vendor",
+        vendorType: "Lab Vendor",
       });
       setDialogState((prev) => ({ ...prev, createOpen: false }));
       await fetchOrders();
@@ -579,7 +578,11 @@ function Orders() {
     },
     // { Header: "Address", accessor: "address" },
     { Header: "Amount", accessor: "amount" },
-    { Header: "Order Date", accessor: "createdAt" },
+    {
+      Header: "Order Date",
+      accessor: "createdAt",
+      Cell: ({ value }) => new Date(value).toLocaleString(), // Formats to user-friendly date + time
+    },
     {
       Header: "Status",
       accessor: "status",
@@ -588,32 +591,119 @@ function Orders() {
     {
       Header: "Details",
       accessor: "actions",
-      Cell: ({ row }) => (
-        <Box>
+      Cell: ({ row }) => {
+        const order = row.original;
+
+        const handleFileUpload = async (event) => {
+          const file = event.target.files[0];
+          if (!file) return;
+
+          const formData = new FormData();
+          formData.append("files", file);
+
+          try {
+            const uploadResponse = await fetch("https://quickmeds.sndktech.online/upload-files", {
+              method: "POST",
+              headers: {
+                "x-authorization": "RGVlcGFrS3-VzaHdhaGE5Mzk5MzY5ODU0-QWxoblBvb2ph",
+                Authorization:
+                  "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiaWF0IjoxNzQxNTE5MTM1LCJleHAiOjE3NDIxMjM5MzV9._pPDrGFeA7uYP_5ZjBxHSTHExF73XctzQRTKOy-7tEY",
+              },
+              body: formData,
+            });
+
+            const uploadData = await uploadResponse.json();
+            const uploadedFileName = uploadData?.files?.[0];
+
+            if (uploadedFileName) {
+              await fetch(`https://quickmeds.sndktech.online/adminOrderStatus/${order.id}`, {
+                method: "PUT",
+                headers: {
+                  "x-authorization": "RGVlcGFrS3-VzaHdhaGE5Mzk5MzY5ODU0-QWxoblBvb2ph",
+                  Authorization:
+                    "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwiaWF0IjoxNzQxNTE5MTM1LCJleHAiOjE3NDIxMjM5MzV9._pPDrGFeA7uYP_5ZjBxHSTHExF73XctzQRTKOy-7tEY",
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  status: "New-Order",
+                  prescription: [`/uploads/${uploadedFileName}`],
+                }),
+              });
+              setState((prev) => ({
+                ...prev,
+                snackbar: {
+                  open: true,
+                  message: "Prescription uploaded successfully!",
+                  severity: "success",
+                },
+                currentPage: 1,
+              }));
+              fetchOrders();
+            }
+          } catch (error) {
+            console.error("Upload failed", error);
+            alert("Upload failed. Please try again.");
+          }
+        };
+
+        return (
+          <Box>
+            <IconButton
+              onClick={() => setDialogState({ viewOpen: true, currentOrder: order })}
+              size="small"
+            >
+              <VisibilityIcon color="info" />
+            </IconButton>
+
+            {order.status === "Pending" && (
+              <>
+                <IconButton onClick={() => handleStatusChange(order.id, "Accepted")} size="small">
+                  <CheckCircleIcon color="success" />
+                </IconButton>
+                <IconButton onClick={() => handleStatusChange(order.id, "Rejected")} size="small">
+                  <CancelIcon color="error" />
+                </IconButton>
+              </>
+            )}
+
+            {order.status === "E-Consultation" && (
+              <label htmlFor={`file-upload-${order.id}`}>
+                <input
+                  id={`file-upload-${order.id}`}
+                  type="file"
+                  style={{ display: "none" }}
+                  onChange={handleFileUpload}
+                />
+                <IconButton component="span" size="small">
+                  <UploadIcon color="primary" />
+                </IconButton>
+              </label>
+            )}
+          </Box>
+        );
+      },
+    },
+    {
+      Header: "Cancel Order",
+      accessor: "cancelOrder",
+      Cell: ({ row }) => {
+        const order = row.original;
+
+        const handleOpenCancelDialog = () => {
+          setCancelOrderId(order.id);
+          setCancelDialogOpen(true);
+        };
+
+        return (
           <IconButton
-            onClick={() => setDialogState({ viewOpen: true, currentOrder: row.original })}
+            onClick={handleOpenCancelDialog}
             size="small"
+            disabled={order.status === "Cancelled" || order.status === "Delivered"}
           >
-            <VisibilityIcon color="info" />
+            <CancelIcon color="error" />
           </IconButton>
-          {row.original.status === "Pending" && (
-            <>
-              <IconButton
-                onClick={() => handleStatusChange(row.original.id, "Accepted")}
-                size="small"
-              >
-                <CheckCircleIcon color="success" />
-              </IconButton>
-              <IconButton
-                onClick={() => handleStatusChange(row.original.id, "Rejected")}
-                size="small"
-              >
-                <CancelIcon color="error" />
-              </IconButton>
-            </>
-          )}
-        </Box>
-      ),
+        );
+      },
     },
   ];
 
@@ -859,7 +949,7 @@ function Orders() {
                         <TableCell>{dialogState.currentOrder.user.name}</TableCell>
                       </TableRow>
                       <TableRow>
-                        <TableCell>User ID</TableCell>
+                        <TableCell>User Id</TableCell>
                         <TableCell>{dialogState.currentOrder.user.id}</TableCell>
                       </TableRow>
                       <TableRow>
@@ -869,20 +959,6 @@ function Orders() {
                       <TableRow>
                         <TableCell>Email</TableCell>
                         <TableCell>{dialogState.currentOrder.user?.email || "N/A"}</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell>Address</TableCell>
-                        <TableCell>{dialogState.currentOrder.address}</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell>City/State</TableCell>
-                        <TableCell>
-                          {dialogState.currentOrder.city}, {dialogState.currentOrder.state}
-                        </TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell>Payment Type</TableCell>
-                        <TableCell>{dialogState.currentOrder.PaymentType}</TableCell>
                       </TableRow>
                     </TableBody>
                   </Table>
@@ -1142,18 +1218,6 @@ function Orders() {
                   ))}
                 </Select>
               </FormControl>
-              <FormControl fullWidth sx={{ mt: 1 }}>
-                <InputLabel>Vendor Type</InputLabel>
-                <Select
-                  value={newOrder.vendorType || "Lab Vendor"}
-                  label="Vendor Type"
-                  onChange={(e) => setNewOrder((prev) => ({ ...prev, vendorType: e.target.value }))}
-                  sx={{ width: 350, height: 45 }}
-                >
-                  {/* <MenuItem value="Medicine Vendor">Medicine Vendor</MenuItem> */}
-                  <MenuItem value="Lab Vendor">Lab Vendor</MenuItem>
-                </Select>
-              </FormControl>
 
               <FormControl fullWidth sx={{ mt: 2 }}>
                 <InputLabel>Select Vendor</InputLabel>
@@ -1236,6 +1300,18 @@ function Orders() {
                   <MenuItem value="Online">Online Payment</MenuItem>
                 </Select>
               </FormControl>
+              <FormControl fullWidth sx={{ mt: 1 }}>
+                <InputLabel>Vendor Type</InputLabel>
+                <Select
+                  value={newOrder.vendorType}
+                  label="Vendor Type"
+                  onChange={(e) => setNewOrder((prev) => ({ ...prev, vendorType: e.target.value }))}
+                  sx={{ width: 350, height: 45 }}
+                >
+                  <MenuItem value="Lab Vendor">Lab Vendor</MenuItem>
+                  {/* <MenuItem value="Lab Vendor">Lab Vendor</MenuItem> */}
+                </Select>
+              </FormControl>
             </Grid>
             <Grid item xs={12} md={6}>
               <MDTypography variant="h6" gutterBottom>
@@ -1244,7 +1320,7 @@ function Orders() {
               {newOrder.products.map((product, index) => (
                 <Box key={index} sx={{ mb: 2, p: 1, border: "1px solid #eee", borderRadius: 1 }}>
                   <Box display="flex" justifyContent="space-between" alignItems="center">
-                    <MDTypography variant="subtitle2">Lab test #{index + 1}</MDTypography>
+                    <MDTypography variant="subtitle2">Product #{index + 1}</MDTypography>
                     {index > 0 && (
                       <IconButton size="small" onClick={() => removeProductField(index)}>
                         <DeleteIcon color="error" fontSize="small" />
@@ -1252,28 +1328,25 @@ function Orders() {
                     )}
                   </Box>
                   <FormControl fullWidth sx={{ mt: 1 }}>
-                    <InputLabel>Select Lab Test</InputLabel>
+                    <InputLabel>Select Product</InputLabel>
                     <Select
                       value={product.productId || ""}
-                      label="Select Lab Test"
+                      label="Select Product"
                       onChange={(e) => {
-                        const selectedTest = labTestsList.find(
-                          (test) => test.id === e.target.value
-                        );
-                        handleProductChange(index, "productId", selectedTest.id);
-                        handleProductChange(index, "productName", selectedTest.testName);
-                        handleProductChange(index, "price", selectedTest.sellingPrice);
+                        const selectedProduct = productsList.find((p) => p.id === e.target.value);
+                        handleProductChange(index, "productId", selectedProduct.id);
+                        handleProductChange(index, "productName", selectedProduct.productName);
+                        handleProductChange(index, "price", selectedProduct.sellingPrice);
                       }}
-                      sx={{ width: 350, height: 40 }}
+                      sx={{ width: 350, height: 45 }}
                     >
-                      {labTestsList.map((test) => (
-                        <MenuItem key={test.id} value={test.id}>
-                          {test.testName} (₹{test.sellingPrice})
+                      {productsList.map((prod) => (
+                        <MenuItem key={prod.id} value={prod.id}>
+                          {prod.productName} (₹{prod.sellingPrice})
                         </MenuItem>
                       ))}
                     </Select>
                   </FormControl>
-
                   <TextField
                     margin="dense"
                     name="quantity"
@@ -1359,6 +1432,60 @@ function Orders() {
           {state.snackbar.message}
         </Alert>
       </Snackbar>
+      {/* cancel order dailog */}
+
+      <Dialog open={cancelDialogOpen} onClose={() => setCancelDialogOpen(false)}>
+        <DialogTitle>Cancel Order</DialogTitle>
+        <DialogContent>Are you sure you want to cancel this order?</DialogContent>
+        <DialogActions>
+          <Button onClick={() => setCancelDialogOpen(false)} color="primary">
+            No
+          </Button>
+          <Button
+            onClick={async () => {
+              try {
+                const response = await fetch(
+                  "https://quickmeds.sndktech.online/adminOrder/cancel",
+                  {
+                    method: "PUT",
+                    headers: {
+                      Authorization: `Bearer ${Token}`,
+                      "x-authorization": "RGVlcGFrS3-VzaHdhaGE5Mzk5MzY5ODU0-QWxoblBvb2ph",
+                      "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                      orderId: cancelOrderId,
+                      finalOrderStatus: "Cancelled",
+                    }),
+                  }
+                );
+                if (response.ok) {
+                  setState((prev) => ({
+                    ...prev,
+                    snackbar: {
+                      open: true,
+                      message: "Order cancelled successfully!",
+                      severity: "success",
+                    },
+                  }));
+                  fetchOrders();
+                } else {
+                  throw new Error("Failed to cancel");
+                }
+              } catch (error) {
+                console.error("Cancel failed", error);
+                alert("Cancellation failed. Please try again.");
+              } finally {
+                setCancelDialogOpen(false);
+                setCancelOrderId(null);
+              }
+            }}
+            color="error"
+          >
+            Yes, Cancel
+          </Button>
+        </DialogActions>
+      </Dialog>
     </DashboardLayout>
   );
 }

@@ -255,7 +255,7 @@ function LabTests() {
       if (data?.files?.[0]) {
         setFormData((prev) => ({
           ...prev,
-          [fieldName]: data.files[0], // just the relative path
+          [fieldName]: `/uploads/${data.files[0]}`,
         }));
       }
     } catch (error) {
