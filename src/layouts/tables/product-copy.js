@@ -162,6 +162,8 @@ function Products() {
   });
 
   const [authors, setAuthors] = useState([]);
+  const [commition, Setcommition] = useState([]);
+  console.log("commition", commition);
   const [uploading, setUploading] = useState(false);
 
   const [newProduct, setNewProduct] = useState({
@@ -210,8 +212,10 @@ function Products() {
     strength: "",
     quantity: 0,
     stock: "Available",
+    commission: "",
     compiled_by: "",
     reviewed_by: "",
+    productMg: "",
   });
 
   const baseUrl = process.env.REACT_APP_BASE_URL || "https://quickmeds.sndktech.online";
@@ -267,6 +271,32 @@ function Products() {
       const data = await response.json();
       if (data?.data) {
         setAuthors(data.data);
+      }
+    } catch (error) {
+      console.error("Error fetching authors:", error);
+      setState((prev) => ({
+        ...prev,
+        snackbar: {
+          open: true,
+          message: "Failed to load authors",
+          severity: "error",
+        },
+      }));
+    }
+  }, [baseUrl, xAuthHeader]);
+
+  const fetchCommition = useCallback(async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${baseUrl}/commission.get`, {
+        headers: {
+          "x-authorization": xAuthHeader,
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await response.json();
+      if (data) {
+        Setcommition(data.commissions);
       }
     } catch (error) {
       console.error("Error fetching authors:", error);
@@ -350,6 +380,7 @@ function Products() {
   useEffect(() => {
     fetchCategories();
     fetchAuthors();
+    fetchCommition();
     fetchMolecules();
   }, [fetchCategories, fetchAuthors, fetchMolecules]);
 
@@ -443,12 +474,7 @@ function Products() {
       const token = localStorage.getItem("token");
       setState((prev) => ({ ...prev, loading: true }));
 
-      if (
-        !newProduct.productName ||
-        !newProduct.mrp ||
-        !newProduct.sellingPrice ||
-        !newProduct.authorId
-      ) {
+      if (!newProduct.productName) {
         setState((prev) => ({
           ...prev,
           snackbar: {
@@ -507,6 +533,10 @@ function Products() {
         specification: newProduct.specification,
         strength: newProduct.strength,
         quantity: parseInt(newProduct.quantity),
+        commission: newProduct.commission,
+        compiled_by: newProduct.compiled_by,
+        reviewed_by: newProduct.reviewed_by,
+        productMg: newProduct.productMg,
       };
 
       const response = await fetch(`${baseUrl}/product.add`, {
@@ -1255,7 +1285,22 @@ function Products() {
                   ))}
                 </Select>
               </FormControl>
-
+              <FormControl fullWidth margin="normal">
+                <InputLabel>Commition *</InputLabel>
+                <Select
+                  name="commission"
+                  value={newProduct.commission}
+                  onChange={handleInputChange}
+                  label="Commition *"
+                  sx={{ width: 350, height: 40 }}
+                >
+                  {commition.map((commission) => (
+                    <MenuItem key={commission.id} value={commission.id}>
+                      {commission.type} — {commission.commission}%
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
               <TextField
                 label="Manufacturer"
                 name="manufacturer"
@@ -1345,6 +1390,14 @@ function Products() {
                 label="Strength"
                 name="strength"
                 value={newProduct.strength}
+                onChange={handleInputChange}
+                fullWidth
+                margin="normal"
+              />
+              <TextField
+                label="Product MG"
+                name="productMg"
+                value={newProduct.productMg}
                 onChange={handleInputChange}
                 fullWidth
                 margin="normal"
@@ -1606,15 +1659,14 @@ function Products() {
                 </Select>
               </FormControl>
             </Grid>
-
             <Grid item xs={12} md={6}>
               <FormControl fullWidth margin="normal">
-                <InputLabel>Compailed By</InputLabel>
+                <InputLabel>Compiled By</InputLabel>
                 <Select
-                  name="Compiled By"
+                  name="compiled_by"
                   value={newProduct.compiled_by}
                   onChange={handleInputChange}
-                  label="Compailed By *"
+                  label="Compiled By"
                   sx={{ width: 350, height: 40 }}
                 >
                   {authors.map((author) => (
@@ -1629,10 +1681,10 @@ function Products() {
               <FormControl fullWidth margin="normal">
                 <InputLabel>Reviewed By</InputLabel>
                 <Select
-                  name="Reviewed By"
+                  name="reviewed_by"
                   value={newProduct.reviewed_by}
                   onChange={handleInputChange}
-                  label="Reviewed By *"
+                  label="Reviewed By"
                   sx={{ width: 350, height: 40 }}
                 >
                   {authors.map((author) => (
@@ -1664,7 +1716,7 @@ function Products() {
                 }
                 label="Get Notified"
               />
-              <FormControlLabel
+              {/* <FormControlLabel
                 control={
                   <Switch
                     name="discount_offered"
@@ -1673,8 +1725,8 @@ function Products() {
                   />
                 }
                 label="Discount Offered"
-              />
-              <FormControlLabel
+              /> */}
+              {/* <FormControlLabel
                 control={
                   <Switch
                     name="call_me_to_modify"
@@ -1683,8 +1735,8 @@ function Products() {
                   />
                 }
                 label="Call Me to Modify"
-              />
-              <FormControlLabel
+              /> */}
+              {/* <FormControlLabel
                 control={
                   <Switch
                     name="how_to_take_medicine"
@@ -1693,7 +1745,7 @@ function Products() {
                   />
                 }
                 label="How to Take Medicine"
-              />
+              /> */}
             </Grid>
           </Grid>
         </DialogContent>

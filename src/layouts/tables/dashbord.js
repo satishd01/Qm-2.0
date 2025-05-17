@@ -193,16 +193,10 @@ function OrdersDashboard() {
         console.log("Fetched stats:", newStats.totalOrders);
         console.log("prevStatsRef:", prevStatsRef.current.totalOrders);
         // Check for new medicine orders (totalOrders increased)
-        if (newStats.totalOrders > prevStatsRef.current.totalOrders) {
-          setHighlightCards((prev) => ({ ...prev, medicineNew: true }));
-          setTimeout(() => setHighlightCards((prev) => ({ ...prev, medicineNew: false })), 5000);
-        }
-
-        // Check for new lab orders (totalTestBookings increased)
-        if (newStats.totalTestBookings > prevStatsRef.current.totalTestBookings) {
-          setHighlightCards((prev) => ({ ...prev, labNew: true }));
-          setTimeout(() => setHighlightCards((prev) => ({ ...prev, labNew: false })), 5000);
-        }
+        setHighlightCards({
+          medicineNew: ordersData.data.statusCounts.newOrdersBlink === true,
+          labNew: ordersData.data.testBookingStatusCounts.newOrderTestBookingsBlink === true,
+        });
 
         setStats(newStats);
         prevStatsRef.current = {

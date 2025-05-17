@@ -980,72 +980,96 @@ function Orders() {
                   </Box>
                 )}
               </Grid>
-              <Grid item xs={12} md={6}>
-                <MDTypography variant="h6">Order Summary</MDTypography>
+              <Box mt={3}>
+                <MDTypography variant="h6">Vendor Information</MDTypography>
                 <TableContainer component={Paper} sx={{ mt: 2 }}>
                   <Table size="small">
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>Product</TableCell>
-                        <TableCell align="right">Quantity</TableCell>
-                        <TableCell align="right">Price</TableCell>
-                        <TableCell align="right">Total</TableCell>
-                      </TableRow>
-                    </TableHead>
                     <TableBody>
-                      {dialogState.currentOrder.products?.map((product, index) => (
-                        <TableRow key={index}>
-                          <TableCell>{product.productName || `Product ${index + 1}`}</TableCell>
-                          <TableCell align="right">{product.quantity}</TableCell>
-                          <TableCell align="right">₹{product.price}</TableCell>
-                          <TableCell align="right">
-                            ₹{(product.quantity * product.price).toFixed(2)}
-                          </TableCell>
-                        </TableRow>
-                      ))}
                       <TableRow>
-                        <TableCell colSpan={3} align="right">
-                          <strong>Total Amount:</strong>
+                        <TableCell>Vendor ID</TableCell>
+                        <TableCell>{dialogState.currentOrder.vendorId}</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell>Business Name</TableCell>
+                        <TableCell>
+                          {dialogState.currentOrder.vendorDetails?.businessName || "N/A"}
                         </TableCell>
-                        <TableCell align="right">
-                          <strong>₹{dialogState.currentOrder.amount}</strong>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell>Business Type</TableCell>
+                        <TableCell>
+                          {dialogState.currentOrder.vendorDetails?.businessType || "N/A"}
+                        </TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell>Location</TableCell>
+                        <TableCell>
+                          {dialogState.currentOrder.vendorDetails?.location || "N/A"}
                         </TableCell>
                       </TableRow>
                     </TableBody>
                   </Table>
                 </TableContainer>
+              </Box>
+              <Grid item xs={12} md={6}>
+                <MDTypography variant="h6">Order Summary</MDTypography>
+                <TableContainer component={Paper} sx={{ mt: 2 }}>
+                  <Table size="small">
+                    <TableBody>
+                      {dialogState.currentOrder.products?.map((product, index) => {
+                        const productName =
+                          product.productName ||
+                          product.product?.productName ||
+                          `Product ${index + 1}`;
+                        const quantity = product.quantity || 0;
+                        const price = product.price ?? product.product?.sellingPrice ?? 0;
+                        const total = quantity * price;
 
-                <Box mt={3}>
-                  <MDTypography variant="h6">Vendor Information</MDTypography>
-                  <TableContainer component={Paper} sx={{ mt: 2 }}>
-                    <Table size="small">
-                      <TableBody>
-                        <TableRow>
-                          <TableCell>Vendor ID</TableCell>
-                          <TableCell>{dialogState.currentOrder.vendorId}</TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell>Business Name</TableCell>
-                          <TableCell>
-                            {dialogState.currentOrder.vendorDetails?.businessName || "N/A"}
-                          </TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell>Business Type</TableCell>
-                          <TableCell>
-                            {dialogState.currentOrder.vendorDetails?.businessType || "N/A"}
-                          </TableCell>
-                        </TableRow>
-                        <TableRow>
-                          <TableCell>Location</TableCell>
-                          <TableCell>
-                            {dialogState.currentOrder.vendorDetails?.location || "N/A"}
-                          </TableCell>
-                        </TableRow>
-                      </TableBody>
-                    </Table>
-                  </TableContainer>
-                </Box>
+                        return (
+                          <React.Fragment key={index}>
+                            <TableRow>
+                              <TableCell>
+                                <strong>Product {index + 1}</strong>
+                              </TableCell>
+                              <TableCell></TableCell>
+                            </TableRow>
+                            <TableRow>
+                              <TableCell>Product Name</TableCell>
+                              <TableCell>{productName}</TableCell>
+                            </TableRow>
+                            <TableRow>
+                              <TableCell>Quantity</TableCell>
+                              <TableCell>{quantity}</TableCell>
+                            </TableRow>
+                            <TableRow>
+                              <TableCell>Price</TableCell>
+                              <TableCell>₹{price.toFixed(2)}</TableCell>
+                            </TableRow>
+                            <TableRow>
+                              <TableCell>Total</TableCell>
+                              <TableCell>₹{total.toFixed(2)}</TableCell>
+                            </TableRow>
+                            <TableRow>
+                              <TableCell colSpan={2}>
+                                <hr />
+                              </TableCell>
+                            </TableRow>
+                          </React.Fragment>
+                        );
+                      })}
+
+                      {/* Total Amount Row */}
+                      <TableRow>
+                        <TableCell>
+                          <strong>Total Amount</strong>
+                        </TableCell>
+                        <TableCell>
+                          <strong>₹{dialogState.currentOrder.amount?.toFixed(2) ?? "0.00"}</strong>
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </TableContainer>
 
                 {dialogState.currentOrder.deliveryPartnerDetails && (
                   <Box mt={3}>
