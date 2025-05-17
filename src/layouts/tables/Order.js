@@ -1059,14 +1059,14 @@ function Orders() {
                       })}
 
                       {/* Total Amount Row */}
-                      <TableRow>
+                      {/* <TableRow>
                         <TableCell>
                           <strong>Total Amount</strong>
                         </TableCell>
                         <TableCell>
                           <strong>₹{dialogState.currentOrder.amount?.toFixed(2) ?? "0.00"}</strong>
                         </TableCell>
-                      </TableRow>
+                      </TableRow> */}
                     </TableBody>
                   </Table>
                 </TableContainer>
@@ -1402,11 +1402,11 @@ function Orders() {
               <Button variant="contained" color="error" onClick={addProductField} sx={{ mt: 1 }}>
                 Add Product
               </Button>
-              <Box sx={{ mt: 2 }}>
+              {/* <Box sx={{ mt: 2 }}>
                 <MDTypography variant="h6">
                   Total Amount: ₹{newOrder.amount.toFixed(2)}
                 </MDTypography>
-              </Box>
+              </Box> */}
             </Grid>
           </Grid>
         </DialogContent>
