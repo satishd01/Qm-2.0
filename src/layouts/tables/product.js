@@ -475,9 +475,11 @@ function Products() {
 
       if (
         !newProduct.productName ||
-        molecules.length === 0 ||
-        variant.length === 0 ||
-        expertAdvice.length === 0
+        state.selectedMolecules?.length === 0 ||
+        !newProduct.variants ||
+        newProduct.variants.length === 0 ||
+        !newProduct.expertAdvice ||
+        Object.keys(newProduct.expertAdvice).length === 0
       ) {
         setState((prev) => ({
           ...prev,
@@ -1293,7 +1295,7 @@ function Products() {
                 fullWidth
                 margin="normal"
               />
-              <FormControl fullWidth margin="normal">
+              {/* <FormControl fullWidth margin="normal">
                 <InputLabel>Author *</InputLabel>
                 <Select
                   name="authorId"
@@ -1308,7 +1310,7 @@ function Products() {
                     </MenuItem>
                   ))}
                 </Select>
-              </FormControl>
+              </FormControl> */}
               <FormControl fullWidth margin="normal">
                 <InputLabel>Commition *</InputLabel>
                 <Select
