@@ -337,7 +337,7 @@ function Orders() {
       const token = localStorage.getItem("token");
 
       const statusParam = state.selectedStatus === "All" ? "" : state.selectedStatus;
-      const vendorType = "Lab Vendor"; // You can also make this dynamic if needed
+      const vendorType = "Lab Vendor";
 
       const queryParams = new URLSearchParams({
         ...(statusParam && { status: statusParam }),

@@ -1483,6 +1483,7 @@ function Products() {
                     color="error"
                     startIcon={<CloudUploadIcon />}
                     disabled={uploading}
+                    required
                   >
                     {uploading ? "Uploading..." : "Upload Product Images"}
                   </Button>

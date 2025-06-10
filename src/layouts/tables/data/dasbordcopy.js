@@ -77,10 +77,6 @@ function OrdersDashboard() {
   const [showGraphicalView, setShowGraphicalView] = useState(false);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
-    totalUsers: 0,
-    totalVendors: 0,
-    totalDeliveryPartners: 0,
-    totalProducts: 0,
     totalOrders: 0,
     totalTestBookings: 0,
     medicineOrders: {
@@ -94,22 +90,13 @@ function OrdersDashboard() {
       eConsultationOrders: 0,
     },
     labOrders: {
-      pendingTestBookings: 0,
-      completedTestBookings: 0,
-      cancelledTestBookings: 0,
-      progressTestBookings: 0,
       newOrders: 0,
-      partiallyAcceptedTestBookings: 0,
-      acceptedTestBookings: 0,
-      rejectedTestBookings: 0,
-      deliveredTestBookings: 0,
-      partiallyDeliveredTestBookings: 0,
+      pendingOrders: 0,
+      completedOrders: 0,
+      partiallyDeliveredOrders: 0,
       callToModifyOrders: 0,
-      howToTakeMedicineOrders: 0,
       uploadedReports: 0,
       uploadedInvoices: 0,
-      healthInsuranceCount: 0,
-      donateCount: 0,
     },
     payments: {
       data: [],
@@ -133,6 +120,8 @@ function OrdersDashboard() {
     totalTestBookings: null,
   });
 
+  const isInitialMount = useRef(true); // Track initial mount
+
   const baseUrl = "https://quickmeds.sndktech.online";
   const xAuthHeader = "RGVlcGFrS3-VzaHdhaGE5Mzk5MzY5ODU0-QWxoblBvb2ph";
 
@@ -150,65 +139,63 @@ function OrdersDashboard() {
         params.append("endDate", dateRange.endDate);
       }
 
-      // Fetch statistics data
-      const response = await fetch(`${baseUrl}/adminOrdersCount?${params.toString()}`, {
+      // Fetch order counts
+      const ordersResponse = await fetch(`${baseUrl}/adminOrdersCount?${params.toString()}`, {
         headers: {
           "x-authorization": xAuthHeader,
           Authorization: `Bearer ${token}`,
         },
       });
-      const data = await response.json();
+      const ordersData = await ordersResponse.json();
 
-      if (data.status) {
-        const responseData = data.data;
+      // Fetch payments data
+      const paymentsResponse = await fetch(`${baseUrl}/payments.received?${params.toString()}`, {
+        headers: {
+          "x-authorization": xAuthHeader,
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const paymentsData = await paymentsResponse.json();
+
+      if (ordersData.status && paymentsData.status) {
         const newStats = {
-          totalUsers: responseData.totalUsers || 0,
-          totalVendors: responseData.totalVendors || 0,
-          totalDeliveryPartners: responseData.totalDeliveryPartners || 0,
-          totalProducts: responseData.totalProducts || 0,
-          totalOrders: responseData.totalOrders || 0,
-          totalTestBookings: responseData.totalTestBookings || 0,
+          totalOrders: ordersData.data.totalOrders,
+          totalTestBookings: ordersData.data.totalTestBookings,
           medicineOrders: {
-            newOrders: responseData.statusCounts?.newOrders || 0,
-            pendingOrders: responseData.statusCounts?.pendingOrders || 0,
-            completedOrders: responseData.statusCounts?.acceptedOrders || 0,
-            partiallyDeliveredOrders: responseData.statusCounts?.partiallyDeliveredOrders || 0,
-            callToModifyOrders: responseData.statusCounts?.callToModifyOrders || 0,
-            returnOrderRequests: responseData.statusCounts?.returnOrderRequests || 0,
-            howToTakeMedicineOrders: responseData.statusCounts?.howToTakeMedicineOrders || 0,
-            eConsultationOrders: responseData.statusCounts?.eConsultationOrders || 0,
+            newOrders: ordersData.data.statusCounts.newOrders,
+            pendingOrders: ordersData.data.statusCounts.pendingOrders,
+            completedOrders: ordersData.data.statusCounts.acceptedOrders,
+            partiallyDeliveredOrders: ordersData.data.statusCounts.partiallyDeliveredOrders,
+            callToModifyOrders: ordersData.data.statusCounts.callToModifyOrders,
+            returnOrderRequests: ordersData.data.statusCounts.returnOrderRequests,
+            howToTakeMedicineOrders: ordersData.data.statusCounts.howToTakeMedicineOrders,
+            eConsultationOrders: ordersData.data.statusCounts.eConsultationOrders,
           },
           labOrders: {
-            pendingTestBookings: responseData.testBookingStatusCounts?.pendingTestBookings || 0,
-            completedTestBookings: responseData.testBookingStatusCounts?.completedTestBookings || 0,
-            cancelledTestBookings: responseData.testBookingStatusCounts?.cancelledTestBookings || 0,
-            progressTestBookings: responseData.testBookingStatusCounts?.progressTestBookings || 0,
-            newOrders: responseData.testBookingStatusCounts?.newOrderTestBookings || 0,
-            partiallyAcceptedTestBookings:
-              responseData.testBookingStatusCounts?.partiallyAcceptedTestBookings || 0,
-            acceptedTestBookings: responseData.testBookingStatusCounts?.acceptedTestBookings || 0,
-            rejectedTestBookings: responseData.testBookingStatusCounts?.rejectedTestBookings || 0,
-            deliveredTestBookings: responseData.testBookingStatusCounts?.deliveredTestBookings || 0,
-            partiallyDeliveredTestBookings:
-              responseData.testBookingStatusCounts?.partiallyDeliveredTestBookings || 0,
-            callToModifyOrders: responseData.testBookingStatusCounts?.callToModifyTestBookings || 0,
-            howToTakeMedicineOrders:
-              responseData.testBookingStatusCounts?.howToTakeMedicineTestBookings || 0,
-            uploadedReports: responseData.totalLabReportUploads || 0,
-            uploadedInvoices: responseData.totalUploadedInvoices || 0,
-            healthInsuranceCount: responseData.others?.healthInsuranceCount || 0,
-            donateCount: responseData.others?.donateCount || 0,
+            newOrders: ordersData.data.testBookingStatusCounts.newOrderTestBookings,
+            pendingOrders: ordersData.data.testBookingStatusCounts.pendingTestBookings,
+            completedOrders: ordersData.data.testBookingStatusCounts.completedTestBookings,
+            partiallyDeliveredOrders:
+              ordersData.data.testBookingStatusCounts.partiallyDeliveredTestBookings,
+            callToModifyOrders: ordersData.data.testBookingStatusCounts.callToModifyTestBookings,
+            uploadedReports: ordersData.data.totalLabReportUploads,
+            uploadedInvoices: ordersData.data.totalUploadedInvoices,
+            healthInsuranceCount: ordersData.data.others?.healthInsuranceCount || 0,
+            donateCount: ordersData.data.others?.donateCount || 0,
           },
           payments: {
-            data: [],
-            totalAmount: responseData.totalAmounts?.[paymentPeriod]?.totalAmount || 0,
-            totalTransactions: 0, // This would need to be fetched separately
+            data: paymentsData.data,
+            totalAmount: paymentsData.totalAmount,
+            totalTransactions: paymentsData.total,
           },
         };
 
+        console.log("Fetched stats:", newStats.totalOrders);
+        console.log("prevStatsRef:", prevStatsRef.current.totalOrders);
+        // Check for new medicine orders (totalOrders increased)
         setHighlightCards({
-          medicineNew: responseData.statusCounts?.newOrdersBlink === true,
-          labNew: responseData.testBookingStatusCounts?.newOrderTestBookingsBlink === true,
+          medicineNew: ordersData.data.statusCounts.newOrdersBlink === true,
+          labNew: ordersData.data.testBookingStatusCounts.newOrderTestBookingsBlink === true,
         });
 
         setStats(newStats);
@@ -308,36 +295,18 @@ function OrdersDashboard() {
 
   const labOrderData = useMemo(
     () => ({
-      labels: [
-        "Pending",
-        "Completed",
-        "Cancelled",
-        "In Progress",
-        "New",
-        "Partially Accepted",
-        "Accepted",
-        "Rejected",
-        "Delivered",
-        "Partially Delivered",
-        "Call to Modify",
-        "How to Take",
-      ],
+      labels: ["New", "Pending", "Completed", "Partial", "Modify", "Reports", "Invoices"],
       datasets: [
         {
           label: "Lab Orders",
           data: [
-            stats.labOrders.pendingTestBookings,
-            stats.labOrders.completedTestBookings,
-            stats.labOrders.cancelledTestBookings,
-            stats.labOrders.progressTestBookings,
             stats.labOrders.newOrders,
-            stats.labOrders.partiallyAcceptedTestBookings,
-            stats.labOrders.acceptedTestBookings,
-            stats.labOrders.rejectedTestBookings,
-            stats.labOrders.deliveredTestBookings,
-            stats.labOrders.partiallyDeliveredTestBookings,
+            stats.labOrders.pendingOrders,
+            stats.labOrders.completedOrders,
+            stats.labOrders.partiallyDeliveredOrders,
             stats.labOrders.callToModifyOrders,
-            stats.labOrders.howToTakeMedicineOrders,
+            stats.labOrders.uploadedReports,
+            stats.labOrders.uploadedInvoices,
           ],
           backgroundColor: [
             "#FF6384",
@@ -347,11 +316,6 @@ function OrdersDashboard() {
             "#9966FF",
             "#FF9F40",
             "#8AC24A",
-            "#607D8B",
-            "#9C27B0",
-            "#3F51B5",
-            "#009688",
-            "#795548",
           ],
         },
       ],
@@ -361,24 +325,26 @@ function OrdersDashboard() {
 
   const paymentData = useMemo(
     () => ({
-      labels: ["Total Amount"],
+      labels: stats.payments.data.map((payment) => payment.orderId || "N/A"),
       datasets: [
         {
           label: "Payment Amount",
-          data: [stats.payments.totalAmount],
+          data: stats.payments.data.map((payment) => payment.amount),
           backgroundColor: "#4BC0C0",
           borderColor: "#4BC0C0",
+          tension: 0.1,
         },
       ],
     }),
-    [stats.payments.totalAmount]
+    [stats.payments.data]
   );
 
   // Payment table columns
   const paymentColumns = useMemo(
     () => [
-      { Header: "Period", accessor: "period", width: "25%" },
+      { Header: "Order ID", accessor: "orderId", width: "25%" },
       { Header: "Amount", accessor: "amount", width: "25%" },
+      { Header: "Payment Method", accessor: "transactionType", width: "25%" },
     ],
     []
   );
@@ -387,12 +353,14 @@ function OrdersDashboard() {
   const paymentTableData = useMemo(
     () => ({
       columns: paymentColumns,
-      rows: periodOptions.map((period) => ({
-        period: period.label,
-        amount: `₹${stats.payments.totalAmount}`,
+      rows: stats.payments.data.map((payment) => ({
+        orderId: payment.orderId || "N/A",
+        amount: `₹${payment.amount}`,
+        date: payment.date,
+        method: payment.method || "Unknown",
       })),
     }),
-    [stats.payments.totalAmount, paymentColumns]
+    [stats.payments.data, paymentColumns]
   );
 
   if (loading && !prevStatsRef.current.totalOrders) {
@@ -491,47 +459,13 @@ function OrdersDashboard() {
             </MDBox>
           </Grid>
 
-          {/* Summary Cards */}
-          <Grid item xs={12} md={3}>
-            <Card>
-              <MDBox p={2}>
-                <MDTypography variant="h6">Total Users</MDTypography>
-                <MDTypography variant="h4">{stats.totalUsers}</MDTypography>
-              </MDBox>
-            </Card>
-          </Grid>
-          <Grid item xs={12} md={3}>
-            <Card>
-              <MDBox p={2}>
-                <MDTypography variant="h6">Total Vendors</MDTypography>
-                <MDTypography variant="h4">{stats.totalVendors}</MDTypography>
-              </MDBox>
-            </Card>
-          </Grid>
-          <Grid item xs={12} md={3}>
-            <Card>
-              <MDBox p={2}>
-                <MDTypography variant="h6">Delivery Partners</MDTypography>
-                <MDTypography variant="h4">{stats.totalDeliveryPartners}</MDTypography>
-              </MDBox>
-            </Card>
-          </Grid>
-          <Grid item xs={12} md={3}>
-            <Card>
-              <MDBox p={2}>
-                <MDTypography variant="h6">Total Products</MDTypography>
-                <MDTypography variant="h4">{stats.totalProducts}</MDTypography>
-              </MDBox>
-            </Card>
-          </Grid>
-
           {showGraphicalView ? (
             // Graphical View
             <>
               {/* Medicine Orders Chart */}
-              <Grid item xs={12} mt={4}>
+              <Grid item xs={12}>
                 <MDTypography variant="h4" textAlign="left" mb={2} ml={2}>
-                  Medicine Orders (Total: {stats.totalOrders})
+                  Medicine Orders
                 </MDTypography>
                 <Card>
                   <MDBox p={2} height="400px">
@@ -558,10 +492,10 @@ function OrdersDashboard() {
               {/* Lab Orders Chart */}
               <Grid item xs={12} mt={4}>
                 <MDTypography variant="h4" textAlign="left" mb={2} ml={2}>
-                  Lab Orders (Total: {stats.totalTestBookings})
+                  Lab Orders
                 </MDTypography>
                 <Card>
-                  <MDBox p={2} height="500px">
+                  <MDBox p={2} height="400px">
                     <Bar
                       data={labOrderData}
                       options={{
@@ -588,8 +522,8 @@ function OrdersDashboard() {
                   Earning
                 </MDTypography>
                 <Card>
-                  <MDBox p={2} height="300px">
-                    <Bar
+                  <MDBox p={2} height="400px">
+                    <Line
                       data={paymentData}
                       options={{
                         responsive: true,
@@ -600,12 +534,7 @@ function OrdersDashboard() {
                           },
                           title: {
                             display: true,
-                            text: `Total Earnings: ₹${stats.payments.totalAmount}`,
-                          },
-                        },
-                        scales: {
-                          y: {
-                            beginAtZero: true,
+                            text: `Earning (${paymentPeriod})`,
                           },
                         },
                       }}
@@ -619,7 +548,7 @@ function OrdersDashboard() {
                 <Card>
                   <MDBox p={2}>
                     <MDTypography variant="h5" mb={2}>
-                      Earning by Period
+                      Earning Details
                     </MDTypography>
                     <DataTable
                       table={paymentTableData}
@@ -636,7 +565,7 @@ function OrdersDashboard() {
             // Card View
             <>
               {/* Medicine Orders Section */}
-              <Grid item xs={12} mt={4}>
+              <Grid item xs={12}>
                 <MDTypography variant="h4" textAlign="left" mb={2} ml={2}>
                   Medicine Orders (Total: {stats.totalOrders})
                 </MDTypography>
@@ -713,58 +642,23 @@ function OrdersDashboard() {
                 { label: "New Orders", value: stats.labOrders.newOrders, key: "newOrders" },
                 {
                   label: "Pending Orders",
-                  value: stats.labOrders.pendingTestBookings,
-                  key: "pendingTestBookings",
+                  value: stats.labOrders.pendingOrders,
+                  key: "pendingOrders",
                 },
                 {
                   label: "Completed Orders",
-                  value: stats.labOrders.completedTestBookings,
-                  key: "completedTestBookings",
+                  value: stats.labOrders.completedOrders,
+                  key: "completedOrders",
                 },
                 {
-                  label: "Cancelled Orders",
-                  value: stats.labOrders.cancelledTestBookings,
-                  key: "cancelledTestBookings",
-                },
-                {
-                  label: "In Progress",
-                  value: stats.labOrders.progressTestBookings,
-                  key: "progressTestBookings",
-                },
-                {
-                  label: "Partially Accepted",
-                  value: stats.labOrders.partiallyAcceptedTestBookings,
-                  key: "partiallyAcceptedTestBookings",
-                },
-                {
-                  label: "Accepted Orders",
-                  value: stats.labOrders.acceptedTestBookings,
-                  key: "acceptedTestBookings",
-                },
-                {
-                  label: "Rejected Orders",
-                  value: stats.labOrders.rejectedTestBookings,
-                  key: "rejectedTestBookings",
-                },
-                {
-                  label: "Delivered Orders",
-                  value: stats.labOrders.deliveredTestBookings,
-                  key: "deliveredTestBookings",
-                },
-                {
-                  label: "Partially Delivered",
-                  value: stats.labOrders.partiallyDeliveredTestBookings,
-                  key: "partiallyDeliveredTestBookings",
+                  label: "Partial Orders",
+                  value: stats.labOrders.partiallyDeliveredOrders,
+                  key: "partiallyDeliveredOrders",
                 },
                 {
                   label: "Call To Modify",
                   value: stats.labOrders.callToModifyOrders,
                   key: "callToModifyOrders",
-                },
-                {
-                  label: "How To Take Medicine",
-                  value: stats.labOrders.howToTakeMedicineOrders,
-                  key: "howToTakeMedicineOrders",
                 },
                 {
                   label: "Uploaded Reports",
@@ -782,9 +676,9 @@ function OrdersDashboard() {
                   key: "healthInsurance",
                 },
                 {
-                  label: "Donations",
+                  label: "Donation",
                   value: stats.labOrders.donateCount,
-                  key: "donateCount",
+                  key: "donation",
                 },
               ].map((item) => (
                 <Grid item xs={12} md={3} key={`lab-${item.key}`}>
@@ -795,7 +689,7 @@ function OrdersDashboard() {
                           ? "report"
                           : item.key === "healthInsurance"
                             ? "health-insurance"
-                            : item.key === "donateCount"
+                            : item.key === "donation"
                               ? "donation"
                               : "lab-order"
                       )
@@ -827,6 +721,9 @@ function OrdersDashboard() {
                     <MDBox display="flex" justifyContent="space-between" mb={2}>
                       <MDTypography variant="h5">
                         Total Amount: ₹{stats.payments.totalAmount}
+                      </MDTypography>
+                      <MDTypography variant="h5">
+                        Total Transactions: {stats.payments.totalTransactions}
                       </MDTypography>
                     </MDBox>
                     <DataTable
