@@ -214,7 +214,7 @@ function DeliveryPartners() {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify({ status: newStatus, working_status: "Online" }),
       });
 
       if (!response.ok) {
@@ -226,7 +226,7 @@ function DeliveryPartners() {
         ...prev,
         snackbar: {
           open: true,
-          message: `Partner status updated to ${newStatus} successfully!`,
+          message: `Partner status updated successfully!`,
           severity: "success",
         },
       }));
@@ -469,14 +469,7 @@ function DeliveryPartners() {
                 </MDBox>
               </MDBox>
 
-              <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
-                <Tabs value={state.tabValue} onChange={handleTabChange} aria-label="partner tabs">
-                  <Tab label="All Partners" />
-                  <Tab label="Approved" />
-                  <Tab label="Rejected" />
-                  <Tab label="Pending" />
-                </Tabs>
-              </Box>
+              <Box sx={{ borderBottom: 1, borderColor: "divider" }}></Box>
 
               <MDBox pt={3}>
                 {filteredPartners.length > 0 ? (
