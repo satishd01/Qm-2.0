@@ -162,7 +162,7 @@ function Products() {
     open: false,
     currentProduct: null,
     isEdit: false,
-   viewOpen: false
+    viewOpen: false,
   });
 
   const [deleteDialog, setDeleteDialog] = useState({
@@ -406,12 +406,12 @@ function Products() {
     setNewProduct((prev) => ({ ...prev, [name]: value }));
   };
 
-const handleOpenProductDetails = (product) => {
-  setProductDetailsModal({
-    open: true,
-    product: product,
-  });
-};
+  const handleOpenProductDetails = (product) => {
+    setProductDetailsModal({
+      open: true,
+      product: product,
+    });
+  };
 
   const handleBooleanChange = (e) => {
     const { name, checked } = e.target;
@@ -875,20 +875,17 @@ const handleOpenProductDetails = (product) => {
     { Header: "Quantity Cap", accessor: "quantity" },
     { Header: "Stock", accessor: "stock" },
     {
-    Header: "View Details",
-    accessor: "viewDetails",
-    Cell: ({ row }) => {
-      const product = row.original;
-      return (
-        <IconButton
-          onClick={() => handleOpenProductDetails(product)}
-          size="small"
-        >
-          <VisibilityIcon color="info" />
-        </IconButton>
-      );
+      Header: "View Details",
+      accessor: "viewDetails",
+      Cell: ({ row }) => {
+        const product = row.original;
+        return (
+          <IconButton onClick={() => handleOpenProductDetails(product)} size="small">
+            <VisibilityIcon color="info" />
+          </IconButton>
+        );
+      },
     },
-  },
     {
       Header: "Actions",
       accessor: "id",
