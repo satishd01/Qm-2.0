@@ -306,12 +306,20 @@ function LabTests() {
         return;
       }
 
-      if (!formData.testName || !formData.description) {
+      if (
+        !formData.testName ||
+        !formData.description ||
+        !formData.mrp ||
+        !formData.sellingPrice ||
+        !formData.sampleRequired ||
+        !formData.prescriptionRequired
+      ) {
         setState((prev) => ({
           ...prev,
           snackbar: {
             open: true,
-            message: "Test Name and Description are required",
+            message:
+              "Test Name ,Sample,Mrp,Selling Price,Discount,Prescription Required are required",
             severity: "warning",
           },
         }));
