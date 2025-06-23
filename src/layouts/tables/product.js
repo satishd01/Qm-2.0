@@ -5,6 +5,8 @@ import PropTypes from "prop-types";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
+import VisibilityIcon from "@mui/icons-material/Visibility";
+
 import {
   Grid,
   Card,
@@ -28,6 +30,13 @@ import {
   Alert,
   OutlinedInput,
   IconButton,
+  Typography,
+  TableContainer,
+  Table,
+  TableBody,
+  TableRow,
+  TableCell,
+  Paper,
 } from "@mui/material";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
@@ -153,6 +162,7 @@ function Products() {
     open: false,
     currentProduct: null,
     isEdit: false,
+   viewOpen: false
   });
 
   const [deleteDialog, setDeleteDialog] = useState({
@@ -215,6 +225,10 @@ function Products() {
     compiled_by: "",
     reviewed_by: "",
     productMg: "",
+  });
+  const [productDetailsModal, setProductDetailsModal] = useState({
+    open: false,
+    product: null,
   });
 
   const baseUrl = process.env.REACT_APP_BASE_URL || "https://quickmeds.sndktech.online";
@@ -392,9 +406,21 @@ function Products() {
     setNewProduct((prev) => ({ ...prev, [name]: value }));
   };
 
+const handleOpenProductDetails = (product) => {
+  setProductDetailsModal({
+    open: true,
+    product: product,
+  });
+};
+
   const handleBooleanChange = (e) => {
     const { name, checked } = e.target;
     setNewProduct((prev) => ({ ...prev, [name]: checked }));
+  };
+
+  const handleViewDetails = (product) => {
+    setSelectedProduct(product);
+    setShowDetailsModal(true);
   };
 
   const handleArrayChange = (e, field) => {
@@ -476,17 +502,18 @@ function Products() {
       if (
         !newProduct.productName ||
         state.selectedMolecules?.length === 0 ||
-        !newProduct.variants ||
-        newProduct.variants.length === 0 ||
-        !newProduct.expertAdvice ||
-        Object.keys(newProduct.expertAdvice).length === 0
+        !newProduct.mrp ||
+        !newProduct.sellingPrice ||
+        !newProduct.discount_offered ||
+        !newProduct.isPrescriptionRequired ||
+        !newProduct.schedule_x_drug
       ) {
         setState((prev) => ({
           ...prev,
           snackbar: {
             open: true,
             message:
-              "Product Name, MRP, Selling Price,Molecules,varients and expert advice are required",
+              "Product Name, MRP, Selling Price,Molecules, Discount, Prescription Required, and Schedule X Drug are required fields.",
             severity: "warning",
           },
         }));
@@ -834,21 +861,34 @@ function Products() {
     { Header: "Product Name", accessor: "productName" },
     { Header: "MRP", accessor: "mrp" },
     { Header: "Selling Price", accessor: "sellingPrice" },
-    { Header: "Brand", accessor: "brand" },
     {
       Header: "Category",
       accessor: "category",
       Cell: CategoryCell,
     },
-    { Header: "Expire Date", accessor: "expireDate" },
     {
       Header: "Prescription",
       accessor: "isPrescriptionRequired",
       Cell: PrescriptionCell,
     },
     { Header: "Strength", accessor: "strength" },
-    { Header: "Quantity", accessor: "quantity" },
+    { Header: "Quantity Cap", accessor: "quantity" },
     { Header: "Stock", accessor: "stock" },
+    {
+    Header: "View Details",
+    accessor: "viewDetails",
+    Cell: ({ row }) => {
+      const product = row.original;
+      return (
+        <IconButton
+          onClick={() => handleOpenProductDetails(product)}
+          size="small"
+        >
+          <VisibilityIcon color="info" />
+        </IconButton>
+      );
+    },
+  },
     {
       Header: "Actions",
       accessor: "id",
@@ -1255,22 +1295,22 @@ function Products() {
                 fullWidth
                 margin="normal"
               />
-              <TextField
+              {/* <TextField
                 label="Brand *"
                 name="brand"
                 value={newProduct.brand}
                 onChange={handleInputChange}
                 fullWidth
                 margin="normal"
-              />
-              <TextField
+              /> */}
+              {/* <TextField
                 label="Product Form *"
                 name="productForm"
                 value={newProduct.productForm}
                 onChange={handleInputChange}
                 fullWidth
                 margin="normal"
-              />
+              /> */}
               <FormControl fullWidth margin="normal">
                 <InputLabel>Category *</InputLabel>
                 <Select
@@ -1296,23 +1336,7 @@ function Products() {
                 margin="normal"
               />
               {/* <FormControl fullWidth margin="normal">
-                <InputLabel>Author *</InputLabel>
-                <Select
-                  name="authorId"
-                  value={newProduct.authorId}
-                  onChange={handleInputChange}
-                  label="Author *"
-                  sx={{ width: 350, height: 40 }}
-                >
-                  {authors.map((author) => (
-                    <MenuItem key={author.id} value={author.id}>
-                      {author.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl> */}
-              <FormControl fullWidth margin="normal">
-                <InputLabel>Commition *</InputLabel>
+                <InputLabel>Vendor Commition *</InputLabel>
                 <Select
                   name="commission"
                   value={newProduct.commission}
@@ -1326,7 +1350,15 @@ function Products() {
                     </MenuItem>
                   ))}
                 </Select>
-              </FormControl>
+              </FormControl> */}
+              <TextField
+                label="Vendor commission"
+                name="commission"
+                value={newProduct.commission}
+                onChange={handleInputChange}
+                fullWidth
+                margin="normal"
+              />
               <TextField
                 label="Manufacturer"
                 name="manufacturer"
@@ -1335,14 +1367,14 @@ function Products() {
                 fullWidth
                 margin="normal"
               />
-              <TextField
+              {/* <TextField
                 label="Consume Type"
                 name="consumeType"
                 value={newProduct.consumeType}
                 onChange={handleInputChange}
                 fullWidth
                 margin="normal"
-              />
+              /> */}
               <TextField
                 label="Specification"
                 name="specification"
@@ -1386,7 +1418,7 @@ function Products() {
                   readOnly: true,
                 }}
               />
-              <TextField
+              {/* <TextField
                 label="Expire Date"
                 name="expireDate"
                 type="date"
@@ -1395,7 +1427,7 @@ function Products() {
                 onChange={handleInputChange}
                 fullWidth
                 margin="normal"
-              />
+              /> */}
               <TextField
                 label="Packaging Details"
                 name="packagingDetails"
@@ -1404,14 +1436,14 @@ function Products() {
                 fullWidth
                 margin="normal"
               />
-              <TextField
+              {/* <TextField
                 label="Age Group"
                 name="age"
                 value={newProduct.age}
                 onChange={handleInputChange}
                 fullWidth
                 margin="normal"
-              />
+              /> */}
               <TextField
                 label="Country of Origin"
                 name="country_of_origin"
@@ -1428,15 +1460,15 @@ function Products() {
                 fullWidth
                 margin="normal"
               />
-              <TextField
+              {/* <TextField
                 label="Product MG"
                 name="productMg"
                 value={newProduct.productMg}
                 onChange={handleInputChange}
                 fullWidth
                 margin="normal"
-              />
-              <TextField
+              /> */}
+              {/* <TextField
                 label="Total Sale"
                 name="totalSales"
                 type="number"
@@ -1444,9 +1476,9 @@ function Products() {
                 onChange={handleInputChange}
                 fullWidth
                 margin="normal"
-              />
+              /> */}
               <TextField
-                label="Quantity"
+                label="Quantity Cap"
                 name="quantity"
                 type="number"
                 value={newProduct.quantity}
@@ -1755,7 +1787,7 @@ function Products() {
 
             <Grid item xs={12} md={6}>
               <FormControl fullWidth margin="normal">
-                <InputLabel>Molecules</InputLabel>
+                <InputLabel>Molecule/Composition</InputLabel>
                 <Select
                   multiple
                   required
@@ -1797,15 +1829,15 @@ function Products() {
                 fullWidth
                 margin="normal"
               />
-              <TextField
+              {/* <TextField
                 label="Pin Code"
                 name="pin_code"
                 value={newProduct.pin_code}
                 onChange={handleInputChange}
                 fullWidth
                 margin="normal"
-              />
-              <FormControl fullWidth margin="normal">
+              /> */}
+              {/* <FormControl fullWidth margin="normal">
                 <InputLabel>No Stock</InputLabel>
                 <Select
                   name="stock"
@@ -1817,7 +1849,7 @@ function Products() {
                   <MenuItem value="Available">Available</MenuItem>
                   <MenuItem value="Out of Stock">Not Available</MenuItem>
                 </Select>
-              </FormControl>
+              </FormControl> */}
             </Grid>
             <Grid item xs={12} md={6}>
               <FormControl fullWidth margin="normal">
@@ -1939,6 +1971,138 @@ function Products() {
           </Button>
           <Button onClick={handleDeleteProduct} color="error" variant="contained">
             Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
+      <Dialog
+        open={productDetailsModal.open}
+        onClose={() => setProductDetailsModal({ open: false, product: null })}
+        fullWidth
+        maxWidth="md"
+      >
+        <DialogTitle>Product Details</DialogTitle>
+        <DialogContent dividers>
+          {productDetailsModal.product && (
+            <Grid container spacing={2}>
+              <Grid item xs={12}>
+                <Typography variant="h6" gutterBottom>
+                  {productDetailsModal.product.productName || "Product Name Not Available"}
+                </Typography>
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <Typography variant="subtitle1" gutterBottom>
+                  Basic Information
+                </Typography>
+                <TableContainer component={Paper}>
+                  <Table size="small">
+                    <TableBody>
+                      <TableRow>
+                        <TableCell>Description</TableCell>
+                        <TableCell>{productDetailsModal.product.description || "N/A"}</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell>Composition</TableCell>
+                        <TableCell>{productDetailsModal.product.composition || "N/A"}</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell>Category</TableCell>
+                        <TableCell>{productDetailsModal.product.category || "N/A"}</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell>Subcategory</TableCell>
+                        <TableCell>{productDetailsModal.product.subcategory || "N/A"}</TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <Typography variant="subtitle1" gutterBottom>
+                  Usage Information
+                </Typography>
+                <TableContainer component={Paper}>
+                  <Table size="small">
+                    <TableBody>
+                      <TableRow>
+                        <TableCell>Uses</TableCell>
+                        <TableCell>{productDetailsModal.product.uses || "N/A"}</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell>Directions to Use</TableCell>
+                        <TableCell>{productDetailsModal.product.directions || "N/A"}</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell>Mechanism of Action</TableCell>
+                        <TableCell>
+                          {productDetailsModal.product.mechanismOfAction || "N/A"}
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <Typography variant="subtitle1" gutterBottom>
+                  Safety Information
+                </Typography>
+                <TableContainer component={Paper}>
+                  <Table size="small">
+                    <TableBody>
+                      <TableRow>
+                        <TableCell>Contraindications</TableCell>
+                        <TableCell>
+                          {productDetailsModal.product.contraindications || "N/A"}
+                        </TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell>Side Effects</TableCell>
+                        <TableCell>{productDetailsModal.product.sideEffects || "N/A"}</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell>Precautions</TableCell>
+                        <TableCell>{productDetailsModal.product.precautions || "N/A"}</TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Grid>
+
+              <Grid item xs={12} md={6}>
+                <Typography variant="subtitle1" gutterBottom>
+                  Additional Information
+                </Typography>
+                <TableContainer component={Paper}>
+                  <Table size="small">
+                    <TableBody>
+                      <TableRow>
+                        <TableCell>Reference</TableCell>
+                        <TableCell>{productDetailsModal.product.reference || "N/A"}</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell>Author Information</TableCell>
+                        <TableCell>{productDetailsModal.product.authorInfo || "N/A"}</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell>Compiled By</TableCell>
+                        <TableCell>{productDetailsModal.product.compiledBy || "N/A"}</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell>Reviewed By</TableCell>
+                        <TableCell>{productDetailsModal.product.reviewedBy || "N/A"}</TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Grid>
+            </Grid>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setProductDetailsModal({ open: false, product: null })}>
+            Close
           </Button>
         </DialogActions>
       </Dialog>

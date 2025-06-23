@@ -171,7 +171,6 @@ function Products() {
     mrp: 0,
     sellingPrice: 0,
     brand: "",
-    vendorId: 1,
     productForm: "",
     uses: "",
     age: "",
@@ -190,7 +189,6 @@ function Products() {
     contradictions: "",
     isPrescriptionRequired: false,
     expertAdvice: "",
-    substituteProducts: [],
     authorId: "",
     sub_category: "",
     direction_to_use: "",
@@ -199,7 +197,7 @@ function Products() {
     descriptions: "",
     references: "",
     country_of_origin: "",
-    product_molecule_id: "",
+    product_molecule_id: 1,
     schedule_x_drug: false,
     get_notified: false,
     weight: "",
@@ -211,6 +209,7 @@ function Products() {
     specification: "",
     strength: "",
     quantity: 0,
+    totalSales: 0,
     stock: "Available",
     commission: "",
     compiled_by: "",
@@ -432,7 +431,7 @@ function Products() {
       const data = await response.json();
 
       if (response.ok && data?.files) {
-        const uploadedUrls = data.files.map((file) => `${baseUrl}/${file}`);
+        const uploadedUrls = data.files.map((file) => `/uploads/${file}`);
         setNewProduct((prev) => ({
           ...prev,
           images: [...prev.images, ...uploadedUrls],
@@ -474,44 +473,64 @@ function Products() {
       const token = localStorage.getItem("token");
       setState((prev) => ({ ...prev, loading: true }));
 
-      if (!newProduct.productName) {
+      if (
+        !newProduct.productName ||
+        state.selectedMolecules?.length === 0 ||
+        !newProduct.mrp ||
+        !newProduct.sellingPrice ||
+        !newProduct.discount_offered ||
+        !newProduct.isPrescriptionRequired ||
+        !newProduct.schedule_x_drug
+      ) {
         setState((prev) => ({
           ...prev,
           snackbar: {
             open: true,
-            message: "Product Name, MRP, Selling Price and Author are required",
+            message:
+              "Product Name, MRP, Selling Price,Molecules, Discount, Prescription Required, and Schedule X Drug are required fields.",
             severity: "warning",
           },
         }));
         return;
       }
-
+      const formattedVariants = newProduct.variants.map((variant) => ({
+        units: variant.units || "",
+        mrp: parseFloat(variant.mrp) || 0,
+        sellingPrice: parseFloat(variant.sellingPrice) || 0,
+        stock: variant.stock || "Available",
+      }));
+      const formattedExpertAdvice = {
+        avatar: newProduct.expertAdvice.avatar || "",
+        doctorName: newProduct.expertAdvice.doctorName || "",
+        designation: newProduct.expertAdvice.designation || "",
+        advice: newProduct.expertAdvice.advice || "",
+      };
       const productData = {
-        addedByType: "Vendor",
+        // addedByType: "Vendor",
         productName: newProduct.productName,
         mrp: parseFloat(newProduct.mrp),
         sellingPrice: parseFloat(newProduct.sellingPrice),
         brand: newProduct.brand,
-        vendorId: parseInt(newProduct.vendorId),
+
         productForm: newProduct.productForm,
         uses: newProduct.uses,
         age: newProduct.age,
         categoryId: parseInt(newProduct.categoryId),
-        category: newProduct.category,
+        // category: newProduct.category,
         manufacturer: newProduct.manufacturer,
         consumeType: newProduct.consumeType,
         expireDate: newProduct.expireDate,
         packagingDetails: newProduct.packagingDetails,
         stock: newProduct.stock,
         images: newProduct.images,
-        variants: newProduct.variants,
+        variants: formattedVariants,
         composition: newProduct.composition,
         productIntroduction: newProduct.productIntroduction,
         usesOfMedication: newProduct.usesOfMedication,
         benefits: newProduct.benefits,
         contradictions: newProduct.contradictions,
         isPrescriptionRequired: newProduct.isPrescriptionRequired,
-        expertAdvice: newProduct.expertAdvice,
+        expertAdvice: formattedExpertAdvice,
         substituteProducts: newProduct.substituteProducts,
         authorId: parseInt(newProduct.authorId),
         sub_category: newProduct.sub_category,
@@ -595,7 +614,7 @@ function Products() {
         descriptions: "",
         references: "",
         country_of_origin: "",
-        product_molecule_id: "",
+        product_molecule_id: 1,
         schedule_x_drug: false,
         get_notified: false,
         weight: "",
@@ -1237,14 +1256,22 @@ function Products() {
                 fullWidth
                 margin="normal"
               />
-              <TextField
+              {/* <TextField
                 label="Brand *"
                 name="brand"
                 value={newProduct.brand}
                 onChange={handleInputChange}
                 fullWidth
                 margin="normal"
-              />
+              /> */}
+              {/* <TextField
+                label="Product Form *"
+                name="productForm"
+                value={newProduct.productForm}
+                onChange={handleInputChange}
+                fullWidth
+                margin="normal"
+              /> */}
               <FormControl fullWidth margin="normal">
                 <InputLabel>Category *</InputLabel>
                 <Select
@@ -1269,24 +1296,8 @@ function Products() {
                 fullWidth
                 margin="normal"
               />
-              <FormControl fullWidth margin="normal">
-                <InputLabel>Author *</InputLabel>
-                <Select
-                  name="authorId"
-                  value={newProduct.authorId}
-                  onChange={handleInputChange}
-                  label="Author *"
-                  sx={{ width: 350, height: 40 }}
-                >
-                  {authors.map((author) => (
-                    <MenuItem key={author.id} value={author.id}>
-                      {author.name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-              <FormControl fullWidth margin="normal">
-                <InputLabel>Commition *</InputLabel>
+              {/* <FormControl fullWidth margin="normal">
+                <InputLabel>Vendor Commition *</InputLabel>
                 <Select
                   name="commission"
                   value={newProduct.commission}
@@ -1300,7 +1311,15 @@ function Products() {
                     </MenuItem>
                   ))}
                 </Select>
-              </FormControl>
+              </FormControl> */}
+              <TextField
+                label="Vendor commission"
+                name="commission"
+                value={newProduct.commission}
+                onChange={handleInputChange}
+                fullWidth
+                margin="normal"
+              />
               <TextField
                 label="Manufacturer"
                 name="manufacturer"
@@ -1309,6 +1328,14 @@ function Products() {
                 fullWidth
                 margin="normal"
               />
+              {/* <TextField
+                label="Consume Type"
+                name="consumeType"
+                value={newProduct.consumeType}
+                onChange={handleInputChange}
+                fullWidth
+                margin="normal"
+              /> */}
               <TextField
                 label="Specification"
                 name="specification"
@@ -1352,7 +1379,7 @@ function Products() {
                   readOnly: true,
                 }}
               />
-              <TextField
+              {/* <TextField
                 label="Expire Date"
                 name="expireDate"
                 type="date"
@@ -1361,7 +1388,7 @@ function Products() {
                 onChange={handleInputChange}
                 fullWidth
                 margin="normal"
-              />
+              /> */}
               <TextField
                 label="Packaging Details"
                 name="packagingDetails"
@@ -1370,14 +1397,14 @@ function Products() {
                 fullWidth
                 margin="normal"
               />
-              <TextField
+              {/* <TextField
                 label="Age Group"
                 name="age"
                 value={newProduct.age}
                 onChange={handleInputChange}
                 fullWidth
                 margin="normal"
-              />
+              /> */}
               <TextField
                 label="Country of Origin"
                 name="country_of_origin"
@@ -1394,16 +1421,25 @@ function Products() {
                 fullWidth
                 margin="normal"
               />
-              <TextField
+              {/* <TextField
                 label="Product MG"
                 name="productMg"
                 value={newProduct.productMg}
                 onChange={handleInputChange}
                 fullWidth
                 margin="normal"
-              />
+              /> */}
+              {/* <TextField
+                label="Total Sale"
+                name="totalSales"
+                type="number"
+                value={newProduct.totalSales}
+                onChange={handleInputChange}
+                fullWidth
+                margin="normal"
+              /> */}
               <TextField
-                label="Quantity"
+                label="Quantity Cap"
                 name="quantity"
                 type="number"
                 value={newProduct.quantity}
@@ -1440,6 +1476,7 @@ function Products() {
                     color="error"
                     startIcon={<CloudUploadIcon />}
                     disabled={uploading}
+                    required
                   >
                     {uploading ? "Uploading..." : "Upload Product Images"}
                   </Button>
@@ -1459,13 +1496,85 @@ function Products() {
             </Grid>
 
             <Grid item xs={12} md={6}>
-              <TextField
-                label="Variants (comma separated)"
-                value={newProduct.variants.join(", ")}
-                onChange={(e) => handleArrayChange(e, "variants")}
-                fullWidth
-                margin="normal"
-              />
+              <Grid item xs={12}>
+                <MDTypography variant="h6">Variants</MDTypography>
+                {newProduct.variants.map((variant, index) => (
+                  <Box key={index} sx={{ mb: 2 }}>
+                    <TextField
+                      label={`Variant ${index + 1} Units`}
+                      value={variant.units}
+                      onChange={(e) => {
+                        const newVariants = [...newProduct.variants];
+                        newVariants[index].units = e.target.value;
+                        setNewProduct((prev) => ({ ...prev, variants: newVariants }));
+                      }}
+                      fullWidth
+                      margin="normal"
+                    />
+                    <TextField
+                      label={`Variant ${index + 1} MRP`}
+                      type="number"
+                      value={variant.mrp}
+                      onChange={(e) => {
+                        const newVariants = [...newProduct.variants];
+                        newVariants[index].mrp = parseFloat(e.target.value);
+                        setNewProduct((prev) => ({ ...prev, variants: newVariants }));
+                      }}
+                      fullWidth
+                      margin="normal"
+                    />
+                    <TextField
+                      label={`Variant ${index + 1} Selling Price`}
+                      type="number"
+                      value={variant.sellingPrice}
+                      onChange={(e) => {
+                        const newVariants = [...newProduct.variants];
+                        newVariants[index].sellingPrice = parseFloat(e.target.value);
+                        setNewProduct((prev) => ({ ...prev, variants: newVariants }));
+                      }}
+                      fullWidth
+                      margin="normal"
+                    />
+                    <TextField
+                      label={`Variant ${index + 1} Stock`}
+                      value={variant.stock}
+                      onChange={(e) => {
+                        const newVariants = [...newProduct.variants];
+                        newVariants[index].stock = e.target.value;
+                        setNewProduct((prev) => ({ ...prev, variants: newVariants }));
+                      }}
+                      fullWidth
+                      margin="normal"
+                    />
+                    <Button
+                      variant="contained"
+                      color="error"
+                      onClick={() => {
+                        const newVariants = [...newProduct.variants];
+                        newVariants.splice(index, 1);
+                        setNewProduct((prev) => ({ ...prev, variants: newVariants }));
+                      }}
+                    >
+                      Remove Variant
+                    </Button>
+                  </Box>
+                ))}
+                <Button
+                  variant="contained"
+                  color="error"
+                  onClick={() =>
+                    setNewProduct((prev) => ({
+                      ...prev,
+                      variants: [
+                        ...prev.variants,
+                        { units: "", mrp: 0, sellingPrice: 0, stock: "Available" },
+                      ],
+                    }))
+                  }
+                >
+                  Add Variant
+                </Button>
+              </Grid>
               <TextField
                 label="Composition"
                 name="composition"
@@ -1562,16 +1671,59 @@ function Products() {
                 multiline
                 rows={2}
               />
-              <TextField
-                label="Expert Advice"
-                name="expertAdvice"
-                value={newProduct.expertAdvice}
-                onChange={handleInputChange}
-                fullWidth
-                margin="normal"
-                multiline
-                rows={2}
-              />
+              <Grid item xs={12}>
+                <MDTypography variant="h6">Expert Advice</MDTypography>
+                <TextField
+                  label="Doctor Name"
+                  value={newProduct.expertAdvice.doctorName}
+                  onChange={(e) =>
+                    setNewProduct((prev) => ({
+                      ...prev,
+                      expertAdvice: { ...prev.expertAdvice, doctorName: e.target.value },
+                    }))
+                  }
+                  fullWidth
+                  margin="normal"
+                />
+                <TextField
+                  label="Designation"
+                  value={newProduct.expertAdvice.designation}
+                  onChange={(e) =>
+                    setNewProduct((prev) => ({
+                      ...prev,
+                      expertAdvice: { ...prev.expertAdvice, designation: e.target.value },
+                    }))
+                  }
+                  fullWidth
+                  margin="normal"
+                />
+                <TextField
+                  label="Advice"
+                  value={newProduct.expertAdvice.advice}
+                  onChange={(e) =>
+                    setNewProduct((prev) => ({
+                      ...prev,
+                      expertAdvice: { ...prev.expertAdvice, advice: e.target.value },
+                    }))
+                  }
+                  fullWidth
+                  margin="normal"
+                  multiline
+                  rows={4}
+                />
+                {/* <TextField
+                  label="Avatar URL"
+                  value={newProduct.expertAdvice.avatar}
+                  onChange={(e) =>
+                    setNewProduct((prev) => ({
+                      ...prev,
+                      expertAdvice: { ...prev.expertAdvice, avatar: e.target.value },
+                    }))
+                  }
+                  fullWidth
+                  margin="normal"
+                /> */}
+              </Grid>
               <TextField
                 label="Descriptions"
                 name="descriptions"
@@ -1596,9 +1748,10 @@ function Products() {
 
             <Grid item xs={12} md={6}>
               <FormControl fullWidth margin="normal">
-                <InputLabel>Molecules</InputLabel>
+                <InputLabel>Molecule/Composition</InputLabel>
                 <Select
                   multiple
+                  required
                   value={Array.isArray(state.selectedMolecules) ? state.selectedMolecules : []}
                   onChange={(e) =>
                     setState((prev) => ({
@@ -1637,15 +1790,15 @@ function Products() {
                 fullWidth
                 margin="normal"
               />
-              <TextField
+              {/* <TextField
                 label="Pin Code"
                 name="pin_code"
                 value={newProduct.pin_code}
                 onChange={handleInputChange}
                 fullWidth
                 margin="normal"
-              />
-              <FormControl fullWidth margin="normal">
+              /> */}
+              {/* <FormControl fullWidth margin="normal">
                 <InputLabel>No Stock</InputLabel>
                 <Select
                   name="stock"
@@ -1657,7 +1810,7 @@ function Products() {
                   <MenuItem value="Available">Available</MenuItem>
                   <MenuItem value="Out of Stock">Not Available</MenuItem>
                 </Select>
-              </FormControl>
+              </FormControl> */}
             </Grid>
             <Grid item xs={12} md={6}>
               <FormControl fullWidth margin="normal">
