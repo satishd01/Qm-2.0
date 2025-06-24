@@ -500,13 +500,12 @@ function Products() {
       setState((prev) => ({ ...prev, loading: true }));
 
       if (
-        !newProduct.productName ||
-        state.selectedMolecules?.length === 0 ||
-        !newProduct.mrp ||
-        !newProduct.sellingPrice ||
-        !newProduct.discount_offered ||
-        !newProduct.isPrescriptionRequired ||
-        !newProduct.schedule_x_drug
+        !newProduct.productName
+        // state.selectedMolecules?.length === 0 ||
+        // !newProduct.mrp ||
+        // !newProduct.sellingPrice ||
+        // !newProduct.discount_offered ||
+        // !newProduct.schedule_x_drug
       ) {
         setState((prev) => ({
           ...prev,
@@ -519,18 +518,209 @@ function Products() {
         }));
         return;
       }
-      const formattedVariants = newProduct.variants.map((variant) => ({
-        units: variant.units || "",
-        mrp: parseFloat(variant.mrp) || 0,
-        sellingPrice: parseFloat(variant.sellingPrice) || 0,
-        stock: variant.stock || "Available",
-      }));
+      {
+        newProduct.variants.map((variant, index) => (
+          <Box key={index} sx={{ mb: 2, p: 2, border: "1px solid #eee", borderRadius: 1 }}>
+            <Typography variant="subtitle2" gutterBottom>
+              Variant {index + 1}
+            </Typography>
+
+            <TextField
+              label="Product Name"
+              value={variant.productName}
+              onChange={(e) => handleVariantChange(index, "productName", e.target.value)}
+              fullWidth
+              margin="normal"
+            />
+
+            <TextField
+              label="Molecule/Composition"
+              value={variant.molecule}
+              onChange={(e) => handleVariantChange(index, "molecule", e.target.value)}
+              fullWidth
+              margin="normal"
+            />
+
+            <Grid container spacing={2}>
+              <Grid item xs={6}>
+                <TextField
+                  label="Strength"
+                  value={variant.strength}
+                  onChange={(e) => handleVariantChange(index, "strength", e.target.value)}
+                  fullWidth
+                  margin="normal"
+                />
+              </Grid>
+              <Grid item xs={6}>
+                <TextField
+                  label="Specification"
+                  value={variant.specification}
+                  onChange={(e) => handleVariantChange(index, "specification", e.target.value)}
+                  fullWidth
+                  margin="normal"
+                />
+              </Grid>
+            </Grid>
+
+            <Grid container spacing={2}>
+              <Grid item xs={4}>
+                <TextField
+                  label="Quantity Cap"
+                  type="number"
+                  value={variant.quantity}
+                  onChange={(e) =>
+                    handleVariantChange(index, "quantity", parseInt(e.target.value) || 0)
+                  }
+                  fullWidth
+                  margin="normal"
+                />
+              </Grid>
+              <Grid item xs={4}>
+                <TextField
+                  label="Weight (grams)"
+                  type="number"
+                  value={variant.weight}
+                  onChange={(e) => handleVariantChange(index, "weight", e.target.value)}
+                  fullWidth
+                  margin="normal"
+                />
+              </Grid>
+              <Grid item xs={4}>
+                <TextField
+                  label="Units"
+                  value={variant.units}
+                  onChange={(e) => handleVariantChange(index, "units", e.target.value)}
+                  fullWidth
+                  margin="normal"
+                />
+              </Grid>
+            </Grid>
+
+            <Grid container spacing={2}>
+              <Grid item xs={4}>
+                <TextField
+                  label="MRP"
+                  type="number"
+                  value={variant.mrp}
+                  onChange={(e) =>
+                    handleVariantChange(index, "mrp", parseFloat(e.target.value) || 0)
+                  }
+                  fullWidth
+                  margin="normal"
+                />
+              </Grid>
+              <Grid item xs={4}>
+                <TextField
+                  label="Discount (%)"
+                  type="number"
+                  value={variant.discount}
+                  onChange={(e) => {
+                    handleVariantChange(index, "discount", parseFloat(e.target.value) || 0);
+                    // Calculate selling price
+                    const discountAmount = (variant.mrp * (parseFloat(e.target.value) || 0)) / 100;
+                    const sellingPrice = variant.mrp - discountAmount;
+                    handleVariantChange(index, "sellingPrice", sellingPrice);
+                  }}
+                  fullWidth
+                  margin="normal"
+                />
+              </Grid>
+              <Grid item xs={4}>
+                <TextField
+                  label="Selling Price"
+                  type="number"
+                  value={variant.sellingPrice}
+                  onChange={(e) =>
+                    handleVariantChange(index, "sellingPrice", parseFloat(e.target.value) || 0)
+                  }
+                  fullWidth
+                  margin="normal"
+                  InputProps={{
+                    readOnly: true,
+                  }}
+                />
+              </Grid>
+            </Grid>
+
+            <Box sx={{ mt: 2 }}>
+              <input
+                type="file"
+                id={`variantImages-${index}`}
+                onChange={(e) => handleVariantImageUpload(e, index)}
+                style={{ display: "none" }}
+                accept="image/*"
+                multiple
+              />
+              <label htmlFor={`variantImages-${index}`}>
+                <Button component="span" variant="outlined" startIcon={<CloudUploadIcon />}>
+                  Upload Variant Images
+                </Button>
+              </label>
+              <Box sx={{ mt: 1, display: "flex", flexWrap: "wrap", gap: 1 }}>
+                {variant.images.map((image, imgIndex) => (
+                  <Chip
+                    key={imgIndex}
+                    label={image.split("/").pop()}
+                    onDelete={() => handleRemoveVariantImage(index, imgIndex)}
+                    sx={{ maxWidth: 200 }}
+                  />
+                ))}
+              </Box>
+            </Box>
+
+            <Box sx={{ mt: 2, display: "flex", gap: 2 }}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={variant.notAvailable}
+                    onChange={(e) => handleVariantChange(index, "notAvailable", e.target.checked)}
+                  />
+                }
+                label="Not Available"
+              />
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={variant.getNotified}
+                    onChange={(e) => handleVariantChange(index, "getNotified", e.target.checked)}
+                  />
+                }
+                label="Get Notified"
+              />
+            </Box>
+
+            <Button
+              variant="contained"
+              color="error"
+              onClick={() => handleRemoveVariant(index)}
+              sx={{ mt: 2 }}
+            >
+              Remove Variant
+            </Button>
+          </Box>
+        ));
+      }
       const formattedExpertAdvice = {
         avatar: newProduct.expertAdvice.avatar || "",
         doctorName: newProduct.expertAdvice.doctorName || "",
         designation: newProduct.expertAdvice.designation || "",
         advice: newProduct.expertAdvice.advice || "",
       };
+      const formattedVariants = newProduct.variants.map((variant) => ({
+        units: variant.units,
+        productName: variant.productName,
+        molecule: variant.molecule,
+        strength: variant.strength,
+        specification: variant.specification,
+        quantity: variant.quantity,
+        weight: variant.weight,
+        mrp: variant.mrp,
+        discount: variant.discount,
+        sellingPrice: variant.sellingPrice,
+        images: variant.images,
+        notAvailable: variant.notAvailable,
+        getNotified: variant.getNotified,
+      }));
       const productData = {
         // addedByType: "Vendor",
         productName: newProduct.productName,
@@ -677,7 +867,22 @@ function Products() {
     if (product) {
       setNewProduct({
         ...product,
-        variants: product.variants || [],
+        variants:
+          product.variants?.map((variant) => ({
+            units: variant.units || "",
+            productName: variant.productName || "",
+            molecule: variant.molecule || "",
+            strength: variant.strength || "",
+            specification: variant.specification || "",
+            quantity: variant.quantity || 0,
+            weight: variant.weight || "",
+            mrp: variant.mrp || 0,
+            discount: variant.discount || 0,
+            sellingPrice: variant.sellingPrice || 0,
+            images: variant.images || [],
+            notAvailable: variant.notAvailable || false,
+            getNotified: variant.getNotified || false,
+          })) || [],
         images: product.images || [],
       });
       setState((prev) => ({
@@ -855,6 +1060,74 @@ function Products() {
   );
   ActionsCell.propTypes = {
     value: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+  };
+
+  //varient handler functions
+  const handleVariantChange = (index, field, value) => {
+    setNewProduct((prev) => {
+      const newVariants = [...prev.variants];
+      newVariants[index] = { ...newVariants[index], [field]: value };
+      return { ...prev, variants: newVariants };
+    });
+  };
+
+  const handleVariantImageUpload = async (event, variantIndex) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploading(true);
+    try {
+      const uploadFormData = new FormData();
+      Array.from(files).forEach((file) => {
+        uploadFormData.append("files", file);
+      });
+
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${baseUrl}/upload-files`, {
+        method: "POST",
+        headers: {
+          "x-authorization": xAuthHeader,
+          Authorization: `Bearer ${token}`,
+        },
+        body: uploadFormData,
+      });
+
+      const data = await response.json();
+      if (response.ok && data?.files) {
+        const uploadedUrls = data.files.map((file) => `/uploads/${file}`);
+        setNewProduct((prev) => {
+          const newVariants = [...prev.variants];
+          newVariants[variantIndex] = {
+            ...newVariants[variantIndex],
+            images: [...newVariants[variantIndex].images, ...uploadedUrls],
+          };
+          return { ...prev, variants: newVariants };
+        });
+      }
+    } catch (error) {
+      console.error("Upload error:", error);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleRemoveVariantImage = (variantIndex, imageIndex) => {
+    setNewProduct((prev) => {
+      const newVariants = [...prev.variants];
+      newVariants[variantIndex] = {
+        ...newVariants[variantIndex],
+        images: newVariants[variantIndex].images.filter((_, i) => i !== imageIndex),
+      };
+      return { ...prev, variants: newVariants };
+    });
+  };
+
+  const handleRemoveVariant = (index) => {
+    setNewProduct((prev) => {
+      const newVariants = [...prev.variants];
+      newVariants.splice(index, 1);
+      return { ...prev, variants: newVariants };
+    });
   };
 
   const columns = [
@@ -1512,7 +1785,6 @@ function Products() {
                     color="error"
                     startIcon={<CloudUploadIcon />}
                     disabled={uploading}
-                    required
                   >
                     {uploading ? "Uploading..." : "Upload Product Images"}
                   </Button>
@@ -1535,66 +1807,170 @@ function Products() {
               <Grid item xs={12}>
                 <MDTypography variant="h6">Variants</MDTypography>
                 {newProduct.variants.map((variant, index) => (
-                  <Box key={index} sx={{ mb: 2 }}>
+                  <Box key={index} sx={{ mb: 2, p: 2, border: "1px solid #eee", borderRadius: 1 }}>
+                    <Typography variant="subtitle2" gutterBottom>
+                      Variant {index + 1}
+                    </Typography>
+
                     <TextField
-                      label={`Variant ${index + 1} Units`}
-                      value={variant.units}
-                      onChange={(e) => {
-                        const newVariants = [...newProduct.variants];
-                        newVariants[index].units = e.target.value;
-                        setNewProduct((prev) => ({ ...prev, variants: newVariants }));
-                      }}
+                      label="Product Name"
+                      value={variant.productName}
+                      onChange={(e) => handleVariantChange(index, "productName", e.target.value)}
                       fullWidth
                       margin="normal"
                     />
+
                     <TextField
-                      label={`Variant ${index + 1} MRP`}
+                      label="Molecule/Composition"
+                      value={variant.molecule}
+                      onChange={(e) => handleVariantChange(index, "molecule", e.target.value)}
+                      fullWidth
+                      margin="normal"
+                    />
+
+                    <TextField
+                      label="Strength"
+                      value={variant.strength}
+                      onChange={(e) => handleVariantChange(index, "strength", e.target.value)}
+                      fullWidth
+                      margin="normal"
+                    />
+
+                    <TextField
+                      label="Specification"
+                      value={variant.specification}
+                      onChange={(e) => handleVariantChange(index, "specification", e.target.value)}
+                      fullWidth
+                      margin="normal"
+                    />
+
+                    <TextField
+                      label="Quantity Cap"
+                      type="number"
+                      value={variant.quantity}
+                      onChange={(e) =>
+                        handleVariantChange(index, "quantity", parseInt(e.target.value) || 0)
+                      }
+                      fullWidth
+                      margin="normal"
+                    />
+
+                    <TextField
+                      label="Weight (grams)"
+                      type="number"
+                      value={variant.weight}
+                      onChange={(e) => handleVariantChange(index, "weight", e.target.value)}
+                      fullWidth
+                      margin="normal"
+                    />
+
+                    <TextField
+                      label="MRP"
                       type="number"
                       value={variant.mrp}
+                      onChange={(e) =>
+                        handleVariantChange(index, "mrp", parseFloat(e.target.value) || 0)
+                      }
+                      fullWidth
+                      margin="normal"
+                    />
+
+                    <TextField
+                      label="Discount (%)"
+                      type="number"
+                      value={variant.discount}
                       onChange={(e) => {
-                        const newVariants = [...newProduct.variants];
-                        newVariants[index].mrp = parseFloat(e.target.value);
-                        setNewProduct((prev) => ({ ...prev, variants: newVariants }));
+                        const discount = parseFloat(e.target.value) || 0;
+                        handleVariantChange(index, "discount", discount);
+                        const discountAmount = (variant.mrp * discount) / 100;
+                        const sellingPrice = variant.mrp - discountAmount;
+                        handleVariantChange(index, "sellingPrice", sellingPrice);
                       }}
                       fullWidth
                       margin="normal"
                     />
+
                     <TextField
-                      label={`Variant ${index + 1} Selling Price`}
+                      label="Selling Price"
                       type="number"
                       value={variant.sellingPrice}
-                      onChange={(e) => {
-                        const newVariants = [...newProduct.variants];
-                        newVariants[index].sellingPrice = parseFloat(e.target.value);
-                        setNewProduct((prev) => ({ ...prev, variants: newVariants }));
-                      }}
+                      onChange={(e) =>
+                        handleVariantChange(index, "sellingPrice", parseFloat(e.target.value) || 0)
+                      }
                       fullWidth
                       margin="normal"
-                    />
-                    <TextField
-                      label={`Variant ${index + 1} Stock`}
-                      value={variant.stock}
-                      onChange={(e) => {
-                        const newVariants = [...newProduct.variants];
-                        newVariants[index].stock = e.target.value;
-                        setNewProduct((prev) => ({ ...prev, variants: newVariants }));
+                      InputProps={{
+                        readOnly: true,
                       }}
-                      fullWidth
-                      margin="normal"
                     />
+
+                    <Box sx={{ mt: 2 }}>
+                      <input
+                        type="file"
+                        id={`variantImages-${index}`}
+                        onChange={(e) => handleVariantImageUpload(e, index)}
+                        style={{ display: "none" }}
+                        accept="image/*"
+                        multiple
+                      />
+                      <label htmlFor={`variantImages-${index}`}>
+                        <Button
+                          component="span"
+                          variant="contained"
+                          color="error"
+                          startIcon={<CloudUploadIcon />}
+                        >
+                          Upload Variant Images
+                        </Button>
+                      </label>
+                      <Box sx={{ mt: 1, display: "flex", flexWrap: "wrap", gap: 1 }}>
+                        {variant.images.map((image, imgIndex) => (
+                          <Chip
+                            key={imgIndex}
+                            label={image.split("/").pop()}
+                            onDelete={() => handleRemoveVariantImage(index, imgIndex)}
+                            sx={{ maxWidth: 200 }}
+                          />
+                        ))}
+                      </Box>
+                    </Box>
+
+                    <Box sx={{ mt: 2, display: "flex", gap: 2 }}>
+                      <FormControlLabel
+                        control={
+                          <Switch
+                            checked={variant.notAvailable}
+                            onChange={(e) =>
+                              handleVariantChange(index, "notAvailable", e.target.checked)
+                            }
+                          />
+                        }
+                        label="Not Available"
+                      />
+                      <FormControlLabel
+                        control={
+                          <Switch
+                            checked={variant.getNotified}
+                            onChange={(e) =>
+                              handleVariantChange(index, "getNotified", e.target.checked)
+                            }
+                          />
+                        }
+                        label="Get Notified"
+                      />
+                    </Box>
+
                     <Button
                       variant="contained"
                       color="error"
-                      onClick={() => {
-                        const newVariants = [...newProduct.variants];
-                        newVariants.splice(index, 1);
-                        setNewProduct((prev) => ({ ...prev, variants: newVariants }));
-                      }}
+                      onClick={() => handleRemoveVariant(index)}
+                      sx={{ mt: 2 }}
                     >
                       Remove Variant
                     </Button>
                   </Box>
                 ))}
+
                 <Button
                   variant="contained"
                   color="error"
@@ -1603,7 +1979,21 @@ function Products() {
                       ...prev,
                       variants: [
                         ...prev.variants,
-                        { units: "", mrp: 0, sellingPrice: 0, stock: "Available" },
+                        {
+                          productName: "",
+                          molecule: "",
+                          strength: "",
+                          specification: "",
+                          quantity: 0,
+                          weight: "",
+                          units: "",
+                          mrp: 0,
+                          discount: 0,
+                          sellingPrice: 0,
+                          images: [],
+                          notAvailable: false,
+                          getNotified: false,
+                        },
                       ],
                     }))
                   }
