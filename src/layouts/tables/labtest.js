@@ -85,6 +85,8 @@ function LabTests() {
     faq: [],
     discount: 0,
     fasting: false,
+    compiled_by: "",
+    reviewed_by: "",
   });
   const [slotForm, setSlotForm] = useState({
     slot: "",
@@ -92,6 +94,8 @@ function LabTests() {
     time: "",
     price: "",
   });
+
+  const [authors, setAuthors] = useState([]);
 
   const baseUrl = process.env.REACT_APP_BASE_URL || "https://quickmeds.sndktech.online";
   const xAuthHeader =
@@ -169,9 +173,36 @@ function LabTests() {
     }
   }, [state.currentPage, baseUrl, xAuthHeader, navigate]);
 
+  const fetchAuthors = useCallback(async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${baseUrl}/authors`, {
+        headers: {
+          "x-authorization": xAuthHeader,
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const data = await response.json();
+      if (data?.data) {
+        setAuthors(data.data);
+      }
+    } catch (error) {
+      console.error("Error fetching authors:", error);
+      setState((prev) => ({
+        ...prev,
+        snackbar: {
+          open: true,
+          message: "Failed to load authors",
+          severity: "error",
+        },
+      }));
+    }
+  }, [baseUrl, xAuthHeader]);
+
   useEffect(() => {
+    fetchAuthors();
     fetchLabTests();
-  }, [fetchLabTests]);
+  }, [fetchLabTests, fetchAuthors]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -306,14 +337,7 @@ function LabTests() {
         return;
       }
 
-      if (
-        !formData.testName ||
-        !formData.description ||
-        !formData.mrp ||
-        !formData.sellingPrice ||
-        !formData.sampleRequired ||
-        !formData.prescriptionRequired
-      ) {
+      if (!formData.testName) {
         setState((prev) => ({
           ...prev,
           snackbar: {
@@ -767,6 +791,43 @@ function LabTests() {
                   )}
                 </Grid>
               </Grid>
+            </Grid>
+
+            <Grid item xs={12} md={6}>
+              <FormControl fullWidth margin="normal">
+                <InputLabel>Compiled By</InputLabel>
+                <Select
+                  name="compiled_by"
+                  value={formData.compiled_by}
+                  onChange={handleInputChange}
+                  label="Compiled By"
+                  sx={{ width: 350, height: 40 }}
+                >
+                  {authors.map((author) => (
+                    <MenuItem key={author.id} value={author.id}>
+                      {author.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <FormControl fullWidth margin="normal">
+                <InputLabel>Reviewed By</InputLabel>
+                <Select
+                  name="reviewed_by"
+                  value={formData.reviewed_by}
+                  onChange={handleInputChange}
+                  label="Reviewed By"
+                  sx={{ width: 350, height: 40 }}
+                >
+                  {authors.map((author) => (
+                    <MenuItem key={author.id} value={author.id}>
+                      {author.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
             </Grid>
 
             {/* Additional Information */}
