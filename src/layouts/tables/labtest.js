@@ -72,7 +72,7 @@ function LabTests() {
     bannerImage: "",
     coverImage: "",
     prescription: "",
-    prescriptionRequired: false,
+    isPrescriptionRequired: false,
     testName: "",
     description: "",
     mrp: 0,
@@ -318,7 +318,7 @@ function LabTests() {
   const handlePrescriptionRequiredChange = (e) => {
     setFormData((prev) => ({
       ...prev,
-      prescriptionRequired: e.target.checked,
+      isPrescriptionRequired: e.target.checked,
     }));
   };
 
@@ -939,14 +939,14 @@ function LabTests() {
                 <FormControlLabel
                   control={
                     <Switch
-                      checked={formData.prescriptionRequired}
+                      checked={formData.isPrescriptionRequired}
                       onChange={handlePrescriptionRequiredChange}
                       name="prescriptionRequired"
                     />
                   }
                   label="Prescription Required"
                 />
-                {formData.prescriptionRequired && (
+                {formData.isPrescriptionRequired && (
                   <input
                     type="file"
                     id="prescriptionInput"
@@ -955,7 +955,7 @@ function LabTests() {
                     accept="image/*"
                   />
                 )}
-                {formData.prescriptionRequired && (
+                {formData.isPrescriptionRequired && (
                   <label htmlFor="prescriptionInput">
                     <Button
                       component="span"
