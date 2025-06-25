@@ -509,6 +509,8 @@ function LabTests() {
     { Header: "Selling Price", accessor: "sellingPrice" },
     { Header: "Sample Required", accessor: "sampleRequired" },
     { Header: "Recommended For", accessor: "recommendedFor" },
+    { Header: "Compiled by", accessor: "compiled_by" },
+    { Header: "Reviewed by", accessor: "reviewed_by" },
     {
       Header: "Actions",
       accessor: "actions",

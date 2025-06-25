@@ -2224,7 +2224,7 @@ function Products() {
                 fullWidth
                 margin="normal"
               /> */}
-              {/* <FormControl fullWidth margin="normal">
+              <FormControl fullWidth margin="normal">
                 <InputLabel>No Stock</InputLabel>
                 <Select
                   name="stock"
@@ -2236,7 +2236,7 @@ function Products() {
                   <MenuItem value="Available">Available</MenuItem>
                   <MenuItem value="Out of Stock">Not Available</MenuItem>
                 </Select>
-              </FormControl> */}
+              </FormControl>
             </Grid>
             <Grid item xs={12} md={6}>
               <FormControl fullWidth margin="normal">
