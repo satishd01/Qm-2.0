@@ -55,14 +55,14 @@ const routes = [
     route: "/vendor",
     component: <Vendors />,
   },
-  {
-    type: "collapse",
-    name: "Vendor Commission",
-    key: "Commissions",
-    icon: <Icon fontSize="small">attach_money</Icon>, // local_shipping icon for delivery partners
-    route: "/comition",
-    component: <Commissions />,
-  },
+  // {
+  //   type: "collapse",
+  //   name: "Vendor Commission",
+  //   key: "Commissions",
+  //   icon: <Icon fontSize="small">attach_money</Icon>, // local_shipping icon for delivery partners
+  //   route: "/comition",
+  //   component: <Commissions />,
+  // },
   {
     type: "collapse",
     name: "Delivery/phlebotomist",
@@ -113,8 +113,8 @@ const routes = [
   },
   {
     type: "collapse",
-    name: "Donation",
-    key: "Donation",
+    name: "Unused Medicine",
+    key: "Unused Medicine",
     icon: <Icon fontSize="small">account_balance_wallet</Icon>, // account_balance_wallet icon for charges
     route: "/donation",
     component: <Donations />,

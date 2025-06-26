@@ -782,7 +782,7 @@ function OrdersDashboard() {
                   key: "healthInsurance",
                 },
                 {
-                  label: "Donations",
+                  label: "Unused Medicines",
                   value: stats.labOrders.donateCount,
                   key: "donateCount",
                 },

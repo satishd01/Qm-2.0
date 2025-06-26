@@ -791,7 +791,7 @@ function Orders() {
                 borderColor: "#7b1fa2",
               },
               {
-                label: "Call Me To Modify",
+                label: "Call Me To Modify Prescription",
                 status: "call-me-to-modify",
                 color: "secondary",
                 borderColor: "#7b1fa2",

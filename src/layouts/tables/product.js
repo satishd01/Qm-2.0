@@ -2024,7 +2024,7 @@ function Products() {
             </Grid>
 
             <Grid item xs={12} md={6}>
-              <TextField
+              {/* <TextField
                 label="Uses"
                 name="uses"
                 value={newProduct.uses}
@@ -2033,7 +2033,7 @@ function Products() {
                 margin="normal"
                 multiline
                 rows={2}
-              />
+              /> */}
               <TextField
                 label="Benefits"
                 name="benefits"
