@@ -260,10 +260,10 @@ function Vendors() {
   const columns = [
     { Header: "Vendor Name", accessor: "shop_name" },
     { Header: "Phone Number", accessor: "phoneNumber" },
-    { Header: "Email", accessor: "email" },
     { Header: "Vendor Type", accessor: "vendor_type" },
+    { Header: "Order Count", accessor: "orderCount" },
+    { Header: "Wallet", accessor: "wallet" || "N/A" },
     { Header: "Working Status", accessor: "working_status" },
-    { Header: "Joined At", accessor: "createdAt" },
   ];
 
   const filteredVendors = vendors.filter((vendor) => {

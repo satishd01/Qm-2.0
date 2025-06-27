@@ -103,6 +103,11 @@ function DeliveryPartners() {
       severity: "success",
     },
     tabValue: 0,
+    deliveryBoyCounts: {
+      medicine: 0,
+      lab: 0,
+    },
+    selectedDeliveryType: "Medicine",
   });
   const [dialogState, setDialogState] = useState({
     viewOpen: false,
@@ -131,12 +136,59 @@ function DeliveryPartners() {
   const xAuthHeader =
     process.env.REACT_APP_X_AUTHORIZATION || "RGVlcGFrS3-VzaHdhaGE5Mzk5MzY5ODU0-QWxoblBvb2ph";
 
+  const fetchDeliveryBoyCounts = useCallback(async () => {
+    try {
+      const token = localStorage.getItem("token");
+
+      // Fetch Medicine Delivery Boys count
+      const medResponse = await fetch(
+        `${baseUrl}/deliveryPartner.getAll1?type=Medicine%20Delivery%20Boy`,
+        {
+          headers: {
+            "x-authorization": xAuthHeader,
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      const medData = await medResponse.json();
+
+      // Fetch Lab Delivery Boys count
+      const labResponse = await fetch(
+        `${baseUrl}/deliveryPartner.getAll1?type=Lab%20Delivery%20Boy`,
+        {
+          headers: {
+            "x-authorization": xAuthHeader,
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      const labData = await labResponse.json();
+
+      setState((prev) => ({
+        ...prev,
+        deliveryBoyCounts: {
+          medicine: medData.total || 0,
+          lab: labData.total || 0,
+        },
+      }));
+    } catch (error) {
+      console.error("Error fetching delivery boy counts:", error);
+    }
+  }, [baseUrl, xAuthHeader]);
+
   const fetchPartners = useCallback(async () => {
     try {
       setState((prev) => ({ ...prev, loading: true }));
       const token = localStorage.getItem("token");
 
       let url = `${baseUrl}/deliveryPartner.getAll1?page=${state.currentPage}&page_size=${DEFAULT_PAGE_SIZE}`;
+
+      // Add type filter based on selected delivery type
+      if (state.selectedDeliveryType === "Medicine") {
+        url += `&type=Medicine%20Delivery%20Boy`;
+      } else {
+        url += `&type=Lab%20Delivery%20Boy`;
+      }
 
       if (state.searchTerm) {
         url += `&search=${state.searchTerm}`;
@@ -184,13 +236,23 @@ function DeliveryPartners() {
     state.searchTerm,
     state.selectedStatus,
     state.selectedWorkingStatus,
+    state.selectedDeliveryType,
     baseUrl,
     xAuthHeader,
   ]);
 
   useEffect(() => {
+    fetchDeliveryBoyCounts();
     fetchPartners();
-  }, [fetchPartners]);
+  }, [fetchDeliveryBoyCounts, fetchPartners, state.selectedDeliveryType]);
+
+  const handleDeliveryTypeChange = (type) => {
+    setState((prev) => ({
+      ...prev,
+      selectedDeliveryType: type,
+      currentPage: 1,
+    }));
+  };
 
   const handleTabChange = (event, newValue) => {
     setState((prev) => ({
@@ -231,6 +293,7 @@ function DeliveryPartners() {
         },
       }));
       await fetchPartners();
+      await fetchDeliveryBoyCounts();
     } catch (error) {
       console.error("Error updating partner status:", error);
       setState((prev) => ({
@@ -280,6 +343,13 @@ function DeliveryPartners() {
         throw new Error("First Name and Phone Number are required fields");
       }
 
+      // Set the type based on selected delivery type
+      const partnerToCreate = {
+        ...newPartner,
+        typeOfprofile:
+          state.selectedDeliveryType === "Medicine" ? "Medicine Delivery Boy" : "Lab Delivery Boy",
+      };
+
       const response = await fetch(`${baseUrl}/deliveryPartner.add`, {
         method: "POST",
         headers: {
@@ -287,7 +357,7 @@ function DeliveryPartners() {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(newPartner),
+        body: JSON.stringify(partnerToCreate),
       });
 
       const data = await response.json();
@@ -322,6 +392,7 @@ function DeliveryPartners() {
       });
       setDialogState((prev) => ({ ...prev, createOpen: false }));
       await fetchPartners();
+      await fetchDeliveryBoyCounts();
     } catch (error) {
       console.error("Error creating partner:", error);
       setState((prev) => ({
@@ -343,8 +414,24 @@ function DeliveryPartners() {
       accessor: (row) => `${row.firstName || ""} ${row.lastName || ""}`.trim() || "N/A",
     },
     { Header: "Phone", accessor: "phoneNumber" },
-    { Header: "Email", accessor: "email" },
+    { Header: "Order Count", accessor: "orderCount" },
+    {
+      Header: "Wallet",
+      accessor: "Wallet.balance",
+      Cell: ({ value }) => `₹${value || "0.00"}`, // Format as currency with ₹ symbol
+    },
     { Header: "City", accessor: "city" },
+    {
+      Header: "type",
+      accessor: "type",
+      Cell: ({ value }) => (
+        <Chip
+          label={value || "N/A"}
+          color={value === "Medicine Delivery Boy" ? "primary" : "secondary"}
+          size="small"
+        />
+      ),
+    },
     {
       Header: "Status",
       accessor: "status",
@@ -422,8 +509,57 @@ function DeliveryPartners() {
     <DashboardLayout>
       <DashboardNavbar />
       <MDBox pt={6} pb={3}>
-        <Grid container spacing={6}>
-          <Grid item xs={12}>
+        <Grid container spacing={3}>
+          {/* Delivery Type Cards */}
+          <Grid item xs={12} md={6}>
+            <Card
+              onClick={() => handleDeliveryTypeChange("Medicine")}
+              sx={{
+                cursor: "pointer",
+                border: state.selectedDeliveryType === "Medicine" ? "2px solid #4CAF50" : "none",
+                boxShadow:
+                  state.selectedDeliveryType === "Medicine" ? theme.shadows[10] : theme.shadows[1],
+                transition: "all 0.3s ease",
+                "&:hover": {
+                  transform: "scale(1.02)",
+                  boxShadow: theme.shadows[6],
+                },
+              }}
+            >
+              <MDBox p={3} display="flex" justifyContent="space-between" alignItems="center">
+                <MDTypography variant="h6">Delivery Partner</MDTypography>
+                <MDTypography variant="h4" color="primary">
+                  {state.deliveryBoyCounts.medicine}
+                </MDTypography>
+              </MDBox>
+            </Card>
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <Card
+              onClick={() => handleDeliveryTypeChange("Lab")}
+              sx={{
+                cursor: "pointer",
+                border: state.selectedDeliveryType === "Lab" ? "2px solid #2196F3" : "none",
+                boxShadow:
+                  state.selectedDeliveryType === "Lab" ? theme.shadows[10] : theme.shadows[1],
+                transition: "all 0.3s ease",
+                "&:hover": {
+                  transform: "scale(1.02)",
+                  boxShadow: theme.shadows[6],
+                },
+              }}
+            >
+              <MDBox p={3} display="flex" justifyContent="space-between" alignItems="center">
+                <MDTypography variant="h6">Phlebotomist</MDTypography>
+                <MDTypography variant="h4" color="primary">
+                  {state.deliveryBoyCounts.lab}
+                </MDTypography>
+              </MDBox>
+            </Card>
+          </Grid>
+
+          {/* Main Content */}
+          <Grid item xs={12} mt={5}>
             <Card>
               <MDBox
                 mx={2}
@@ -442,7 +578,7 @@ function DeliveryPartners() {
                   flexWrap="wrap"
                 >
                   <MDTypography variant="h6" color="black">
-                    Delivery Partner
+                    {state.selectedDeliveryType} Partners
                   </MDTypography>
                   <MDBox display="flex" gap={2} flexWrap="wrap">
                     <TextField
@@ -548,6 +684,29 @@ function DeliveryPartners() {
                         <TableCell>{dialogState.currentPartner.address || "N/A"}</TableCell>
                       </TableRow>
                       <TableRow>
+                        <TableCell>Type</TableCell>
+                        <TableCell>
+                          <Chip
+                            label={dialogState.currentPartner.type || "N/A"}
+                            color={
+                              dialogState.currentPartner.typeOfprofile === "Medicine Delivery Boy"
+                                ? "primary"
+                                : "secondary"
+                            }
+                            size="small"
+                          />
+                        </TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <MDTypography variant="h6">Status Information</MDTypography>
+                <TableContainer component={Paper} sx={{ mt: 2 }}>
+                  <Table size="small">
+                    <TableBody>
+                      <TableRow>
                         <TableCell>Status</TableCell>
                         <TableCell>
                           <Chip
@@ -577,15 +736,6 @@ function DeliveryPartners() {
                           />
                         </TableCell>
                       </TableRow>
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <MDTypography variant="h6">Additional Information</MDTypography>
-                <TableContainer component={Paper} sx={{ mt: 2 }}>
-                  <Table size="small">
-                    <TableBody>
                       <TableRow>
                         <TableCell>Insurance</TableCell>
                         <TableCell>
@@ -613,10 +763,6 @@ function DeliveryPartners() {
                         </>
                       )}
                       <TableRow>
-                        <TableCell>Profile Type</TableCell>
-                        <TableCell>{dialogState.currentPartner.typeOfprofile || "N/A"}</TableCell>
-                      </TableRow>
-                      <TableRow>
                         <TableCell>Created At</TableCell>
                         <TableCell>
                           {new Date(dialogState.currentPartner.createdAt).toLocaleString()}
@@ -643,7 +789,7 @@ function DeliveryPartners() {
         fullWidth
         maxWidth="sm"
       >
-        <DialogTitle>Add New Delivery Partner</DialogTitle>
+        <DialogTitle>Add New {state.selectedDeliveryType} Delivery Partner</DialogTitle>
         <DialogContent dividers>
           <Grid container spacing={2}>
             <Grid item xs={12} md={6}>
@@ -817,6 +963,7 @@ DeliveryPartners.propTypes = {
       address: PropTypes.string,
       status: PropTypes.string,
       working_status: PropTypes.string,
+      typeOfprofile: PropTypes.string,
       educationalDetails: PropTypes.shape({
         disability: PropTypes.shape({
           insurance: PropTypes.bool,
@@ -827,7 +974,7 @@ DeliveryPartners.propTypes = {
       createdAt: PropTypes.string,
     }).isRequired,
   }).isRequired,
-  value: PropTypes.string, // Add this line to validate 'value'
+  value: PropTypes.string,
 };
 
 export default DeliveryPartners;

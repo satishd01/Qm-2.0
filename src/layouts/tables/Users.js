@@ -35,6 +35,8 @@ function Users() {
     name: "",
     countryCode: "",
     phone: "",
+    email: "",
+    city: "",
   });
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -379,6 +381,28 @@ function Users() {
             variant="standard"
             value={newUser.phone}
             onChange={(e) => setNewUser({ ...newUser, phone: e.target.value })}
+          />
+          <TextField
+            autoFocus
+            margin="dense"
+            id="city"
+            label="city"
+            type="text"
+            fullWidth
+            variant="standard"
+            value={newUser.city}
+            onChange={(e) => setNewUser({ ...newUser, city: e.target.value })}
+          />
+          <TextField
+            autoFocus
+            margin="dense"
+            id="email"
+            label="Email"
+            type="email"
+            fullWidth
+            variant="standard"
+            value={newUser.email}
+            onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
           />
         </DialogContent>
         <DialogActions>

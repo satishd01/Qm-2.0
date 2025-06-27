@@ -1536,6 +1536,7 @@ function Products() {
                             currentPage: 1,
                           }));
                         }}
+                        sx={{ width: 350, height: 40 }}
                       >
                         <MenuItem value="all">All Categories</MenuItem>
                         {state.categories.map((category) => (

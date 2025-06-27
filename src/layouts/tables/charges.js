@@ -475,7 +475,12 @@ function Charges() {
   // Prepare data for DataTable
   const tableData = {
     columns: [
-      { Header: "Charge Type", accessor: "chargesType", width: "30%" },
+      {
+        Header: "Charge Type",
+        accessor: "chargesType",
+        width: "30%",
+        Cell: ({ value }) => (value === "ROI" ? "Rest of India" : value),
+      },
       { Header: "Base Distance", accessor: "baseDistance", width: "20%" },
       { Header: "Additional KM Charge", accessor: "additionalKmCharge", width: "20%" },
       { Header: "Actions", accessor: "actions", width: "30%" },
