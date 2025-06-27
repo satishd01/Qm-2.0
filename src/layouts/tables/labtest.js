@@ -350,12 +350,32 @@ function LabTests() {
         return;
       }
 
-      // Clean empty items from arrays
-      const cleanedData = {
+      function removeEmptyFields(obj) {
+        return Object.entries(obj).reduce((acc, [key, value]) => {
+          if (
+            value !== null &&
+            value !== undefined &&
+            (typeof value !== "string" || value.trim() !== "") &&
+            (!Array.isArray(value) || value.length > 0)
+          ) {
+            acc[key] = value;
+          }
+          return acc;
+        }, {});
+      }
+
+      const cleanedData = removeEmptyFields({
         ...formData,
         others: (formData.others || []).filter((item) => item.title || item.description),
         faq: (formData.faq || []).filter((item) => item.question || item.answer),
-      };
+      });
+
+      // Clean empty items from arrays
+      // const cleanedData = {
+      //   ...formData,
+      //   others: (formData.others || []).filter((item) => item.title || item.description),
+      //   faq: (formData.faq || []).filter((item) => item.question || item.answer),
+      // };
 
       const response = await fetch(`${baseUrl}/labTest.add`, {
         method: "POST",
@@ -653,7 +673,7 @@ function LabTests() {
                 margin="normal"
               />
               <TextField
-                label="Description *"
+                label="Description"
                 name="description"
                 value={formData.description}
                 onChange={handleInputChange}
@@ -677,7 +697,7 @@ function LabTests() {
               <Grid container spacing={2}>
                 <Grid item xs={6}>
                   <TextField
-                    label="MRP (₹)"
+                    label="MRP (₹)*"
                     name="mrp"
                     type="number"
                     value={formData.mrp}
@@ -691,7 +711,7 @@ function LabTests() {
                 </Grid>
                 <Grid item xs={6}>
                   <TextField
-                    label="Discount (%)"
+                    label="Discount (%) *"
                     name="discount"
                     type="number"
                     value={formData.discount}
@@ -705,7 +725,7 @@ function LabTests() {
                 </Grid>
                 <Grid item xs={6}>
                   <TextField
-                    label="Selling Price (₹)"
+                    label="Selling Price (₹) *"
                     name="sellingPrice"
                     type="number"
                     value={formData.sellingPrice}
@@ -718,6 +738,65 @@ function LabTests() {
                   />
                 </Grid>
               </Grid>
+              <TextField
+                label="Sample Required *"
+                name="sampleRequired"
+                value={formData.sampleRequired}
+                onChange={handleInputChange}
+                fullWidth
+                margin="normal"
+              />
+
+              <FormGroup>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={formData.isPrescriptionRequired}
+                      onChange={handlePrescriptionRequiredChange}
+                      name="prescriptionRequired"
+                    />
+                  }
+                  label="Prescription Required"
+                />
+                {formData.isPrescriptionRequired && (
+                  <input
+                    type="file"
+                    id="prescriptionInput"
+                    onChange={(e) => handleImageUpload(e, "prescription")}
+                    style={{ display: "none" }}
+                    accept="image/*"
+                  />
+                )}
+                {formData.isPrescriptionRequired && (
+                  <label htmlFor="prescriptionInput">
+                    <Button
+                      component="span"
+                      variant="contained"
+                      color="error"
+                      startIcon={<CloudUploadIcon />}
+                      disabled={dialogState.uploading}
+                      fullWidth
+                    >
+                      {dialogState.uploading ? "Uploading..." : "Upload Prescription"}
+                    </Button>
+                  </label>
+                )}
+                {formData.prescription && (
+                  <MDTypography variant="caption" display="block" noWrap>
+                    {formData.prescription.split("/").pop()}
+                  </MDTypography>
+                )}
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={formData.fasting}
+                      onChange={handleFastingChange}
+                      name="fasting"
+                    />
+                  }
+                  label="Fasting Required"
+                />
+              </FormGroup>
 
               <TextField
                 label="Preparations"
@@ -727,15 +806,6 @@ function LabTests() {
                 fullWidth
                 multiline
                 rows={2}
-                margin="normal"
-              />
-
-              <TextField
-                label="Sample Required"
-                name="sampleRequired"
-                value={formData.sampleRequired}
-                onChange={handleInputChange}
-                fullWidth
                 margin="normal"
               />
 
@@ -933,7 +1003,7 @@ function LabTests() {
             </Grid>
 
             {/* Prescription and Fasting */}
-            <Grid item xs={12}>
+            {/* <Grid item xs={12}>
               <MDTypography variant="h6" gutterBottom mt={2}>
                 Additional Options
               </MDTypography>
@@ -987,7 +1057,7 @@ function LabTests() {
                   label="Fasting Required"
                 />
               </FormGroup>
-            </Grid>
+            </Grid> */}
           </Grid>
         </DialogContent>
         <DialogActions>
