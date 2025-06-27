@@ -29,6 +29,7 @@ import LabOrders from "layouts/tables/laborders";
 import AskQuestions from "layouts/tables/askquestion";
 import Tips from "layouts/tables/tips";
 import Donations from "layouts/tables/donation";
+import Molecules from "layouts/tables/molucule";
 
 const routes = [
   {
@@ -86,6 +87,14 @@ const routes = [
     icon: <Icon fontSize="small">category</Icon>, // shopping_bag icon for products
     route: "/productcatogory",
     component: <ProductCategories />,
+  },
+  {
+    type: "collapse",
+    name: "Molecule",
+    key: "Molecule",
+    icon: <Icon fontSize="small">category</Icon>, // shopping_bag icon for products
+    route: "/Molecule",
+    component: <Molecules />,
   },
   {
     type: "collapse",

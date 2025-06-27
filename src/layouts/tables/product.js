@@ -6,6 +6,8 @@ import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EditIcon from "@mui/icons-material/Edit";
 import VisibilityIcon from "@mui/icons-material/Visibility";
+import Icon from "@mui/material/Icon";
+import Tooltip from "@mui/material/Tooltip";
 
 import {
   Grid,
@@ -721,34 +723,38 @@ function Products() {
         notAvailable: variant.notAvailable,
         getNotified: variant.getNotified,
       }));
-      const productData = {
-        // addedByType: "Vendor",
-        productName: newProduct.productName,
-        mrp: parseFloat(newProduct.mrp),
-        sellingPrice: parseFloat(newProduct.sellingPrice),
-        brand: newProduct.brand,
 
+      const rawProductData = {
+        productName: newProduct.productName,
+        composition: newProduct.composition,
+        mrp: parseFloat(newProduct.mrp),
+        discount_price_percentage: parseFloat(newProduct.discount_price_percentage),
+        discount_offered: Boolean(newProduct.discount_offered),
+        sellingPrice: parseFloat(newProduct.sellingPrice),
+        isPrescriptionRequired: Boolean(newProduct.isPrescriptionRequired),
+        schedule_x_drug: Boolean(newProduct.schedule_x_drug),
+        // Optional values - add only if provided
+        brand: newProduct.brand,
         productForm: newProduct.productForm,
         uses: newProduct.uses,
         age: newProduct.age,
-        categoryId: parseInt(newProduct.categoryId),
-        // category: newProduct.category,
+        categoryId: newProduct.categoryId ? parseInt(newProduct.categoryId) : undefined,
         manufacturer: newProduct.manufacturer,
         consumeType: newProduct.consumeType,
         expireDate: newProduct.expireDate,
         packagingDetails: newProduct.packagingDetails,
         stock: newProduct.stock,
-        images: newProduct.images,
-        variants: formattedVariants,
-        composition: newProduct.composition,
+        images: newProduct.images?.length ? newProduct.images : undefined,
+        variants: newProduct.variants?.length ? formattedVariants : undefined,
         productIntroduction: newProduct.productIntroduction,
         usesOfMedication: newProduct.usesOfMedication,
         benefits: newProduct.benefits,
         contradictions: newProduct.contradictions,
-        isPrescriptionRequired: newProduct.isPrescriptionRequired,
         expertAdvice: formattedExpertAdvice,
-        substituteProducts: newProduct.substituteProducts,
-        authorId: parseInt(newProduct.authorId),
+        substituteProducts: newProduct.substituteProducts?.length
+          ? newProduct.substituteProducts
+          : undefined,
+        authorId: newProduct.authorId ? parseInt(newProduct.authorId) : undefined,
         sub_category: newProduct.sub_category,
         direction_to_use: newProduct.direction_to_use,
         side_effects: newProduct.side_effects,
@@ -756,23 +762,80 @@ function Products() {
         descriptions: newProduct.descriptions,
         references: newProduct.references,
         country_of_origin: newProduct.country_of_origin,
-        product_molecule_id: state.selectedMolecules,
-        schedule_x_drug: newProduct.schedule_x_drug,
-        get_notified: newProduct.get_notified,
+        product_molecule_id: state.selectedMolecules?.length ? state.selectedMolecules : undefined,
+        get_notified: Boolean(newProduct.get_notified),
         weight: newProduct.weight,
-        discount_price_percentage: newProduct.discount_price_percentage,
-        discount_offered: newProduct.discount_offered,
         pin_code: newProduct.pin_code,
-        call_me_to_modify: newProduct.call_me_to_modify,
-        how_to_take_medicine: newProduct.how_to_take_medicine,
+        call_me_to_modify: Boolean(newProduct.call_me_to_modify),
+        how_to_take_medicine: Boolean(newProduct.how_to_take_medicine),
         specification: newProduct.specification,
         strength: newProduct.strength,
-        quantity: parseInt(newProduct.quantity),
+        quantity: newProduct.quantity ? parseInt(newProduct.quantity) : undefined,
         commission: newProduct.commission,
         compiled_by: newProduct.compiled_by,
         reviewed_by: newProduct.reviewed_by,
         productMg: newProduct.productMg,
       };
+
+      // Remove undefined or empty-string fields
+      const productData = Object.fromEntries(
+        Object.entries(rawProductData).filter(
+          ([_, value]) => value !== undefined && value !== "" && value !== null
+        )
+      );
+
+      // const productData = {
+      //   // addedByType: "Vendor",
+      //   productName: newProduct.productName,
+      //   mrp: parseFloat(newProduct.mrp),
+      //   sellingPrice: parseFloat(newProduct.sellingPrice),
+      //   brand: newProduct.brand,
+
+      //   productForm: newProduct.productForm,
+      //   uses: newProduct.uses,
+      //   age: newProduct.age,
+      //   categoryId: parseInt(newProduct.categoryId),
+      //   // category: newProduct.category,
+      //   manufacturer: newProduct.manufacturer,
+      //   consumeType: newProduct.consumeType,
+      //   expireDate: newProduct.expireDate,
+      //   packagingDetails: newProduct.packagingDetails,
+      //   stock: newProduct.stock,
+      //   images: newProduct.images,
+      //   variants: formattedVariants,
+      //   composition: newProduct.composition,
+      //   productIntroduction: newProduct.productIntroduction,
+      //   usesOfMedication: newProduct.usesOfMedication,
+      //   benefits: newProduct.benefits,
+      //   contradictions: newProduct.contradictions,
+      //   isPrescriptionRequired: newProduct.isPrescriptionRequired,
+      //   expertAdvice: formattedExpertAdvice,
+      //   substituteProducts: newProduct.substituteProducts,
+      //   authorId: parseInt(newProduct.authorId),
+      //   sub_category: newProduct.sub_category,
+      //   direction_to_use: newProduct.direction_to_use,
+      //   side_effects: newProduct.side_effects,
+      //   precautions_while_using: newProduct.precautions_while_using,
+      //   descriptions: newProduct.descriptions,
+      //   references: newProduct.references,
+      //   country_of_origin: newProduct.country_of_origin,
+      //   product_molecule_id: state.selectedMolecules,
+      //   schedule_x_drug: newProduct.schedule_x_drug,
+      //   get_notified: newProduct.get_notified,
+      //   weight: newProduct.weight,
+      //   discount_price_percentage: newProduct.discount_price_percentage,
+      //   discount_offered: newProduct.discount_offered,
+      //   pin_code: newProduct.pin_code,
+      //   call_me_to_modify: newProduct.call_me_to_modify,
+      //   how_to_take_medicine: newProduct.how_to_take_medicine,
+      //   specification: newProduct.specification,
+      //   strength: newProduct.strength,
+      //   quantity: parseInt(newProduct.quantity),
+      //   commission: newProduct.commission,
+      //   compiled_by: newProduct.compiled_by,
+      //   reviewed_by: newProduct.reviewed_by,
+      //   productMg: newProduct.productMg,
+      // };
 
       const response = await fetch(`${baseUrl}/product.add`, {
         method: "POST",
@@ -901,9 +964,8 @@ function Products() {
     try {
       const token = localStorage.getItem("token");
       setState((prev) => ({ ...prev, loading: true }));
-
-      const productData = {
-        id: dialogState.currentProduct.id,
+      const rawProductData = {
+        id: dialogState.currentProduct.id, // Always required
         productName: newProduct.productName,
         mrp: parseFloat(newProduct.mrp),
         sellingPrice: parseFloat(newProduct.sellingPrice),
@@ -911,24 +973,26 @@ function Products() {
         productForm: newProduct.productForm,
         uses: newProduct.uses,
         age: newProduct.age,
-        categoryId: parseInt(newProduct.categoryId),
+        categoryId: newProduct.categoryId ? parseInt(newProduct.categoryId) : undefined,
         category: newProduct.category,
         manufacturer: newProduct.manufacturer,
         consumeType: newProduct.consumeType,
         expireDate: newProduct.expireDate,
         packagingDetails: newProduct.packagingDetails,
         stock: newProduct.stock,
-        images: newProduct.images,
-        variants: newProduct.variants,
+        images: newProduct.images?.length ? newProduct.images : undefined,
+        variants: newProduct.variants?.length ? newProduct.variants : undefined,
         composition: newProduct.composition,
         productIntroduction: newProduct.productIntroduction,
         usesOfMedication: newProduct.usesOfMedication,
         benefits: newProduct.benefits,
         contradictions: newProduct.contradictions,
-        isPrescriptionRequired: newProduct.isPrescriptionRequired,
+        isPrescriptionRequired: Boolean(newProduct.isPrescriptionRequired),
         expertAdvice: newProduct.expertAdvice,
-        substituteProducts: newProduct.substituteProducts,
-        authorId: parseInt(newProduct.authorId),
+        substituteProducts: newProduct.substituteProducts?.length
+          ? newProduct.substituteProducts
+          : undefined,
+        authorId: newProduct.authorId ? parseInt(newProduct.authorId) : undefined,
         sub_category: newProduct.sub_category,
         direction_to_use: newProduct.direction_to_use,
         side_effects: newProduct.side_effects,
@@ -936,19 +1000,29 @@ function Products() {
         descriptions: newProduct.descriptions,
         references: newProduct.references,
         country_of_origin: newProduct.country_of_origin,
-        product_molecule_id: state.selectedMolecules,
-        schedule_x_drug: newProduct.schedule_x_drug,
-        get_notified: newProduct.get_notified,
+        product_molecule_id: state.selectedMolecules?.length ? state.selectedMolecules : undefined,
+        schedule_x_drug: Boolean(newProduct.schedule_x_drug),
+        get_notified: Boolean(newProduct.get_notified),
         weight: newProduct.weight,
-        discount_price_percentage: newProduct.discount_price_percentage,
-        discount_offered: newProduct.discount_offered,
+        discount_price_percentage:
+          newProduct.discount_price_percentage !== ""
+            ? parseFloat(newProduct.discount_price_percentage)
+            : undefined,
+        discount_offered: Boolean(newProduct.discount_offered),
         pin_code: newProduct.pin_code,
-        call_me_to_modify: newProduct.call_me_to_modify,
-        how_to_take_medicine: newProduct.how_to_take_medicine,
+        call_me_to_modify: Boolean(newProduct.call_me_to_modify),
+        how_to_take_medicine: Boolean(newProduct.how_to_take_medicine),
         specification: newProduct.specification,
         strength: newProduct.strength,
-        quantity: parseInt(newProduct.quantity),
+        quantity: newProduct.quantity ? parseInt(newProduct.quantity) : undefined,
       };
+
+      // Remove null, undefined, and empty string values
+      const productData = Object.fromEntries(
+        Object.entries(rawProductData).filter(
+          ([_, value]) => value !== undefined && value !== null && value !== ""
+        )
+      );
 
       const response = await fetch(`${baseUrl}/product.updateByVendor`, {
         method: "PUT",
@@ -1582,7 +1656,7 @@ function Products() {
                 margin="normal"
               /> */}
               <FormControl fullWidth margin="normal">
-                <InputLabel>Category *</InputLabel>
+                <InputLabel>Category</InputLabel>
                 <Select
                   name="categoryId"
                   value={newProduct.categoryId}
@@ -1621,6 +1695,49 @@ function Products() {
                   ))}
                 </Select>
               </FormControl> */}
+              <Grid item xs={12} md={6} sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                <FormControl fullWidth margin="normal">
+                  <InputLabel>Molecule</InputLabel>
+                  <Select
+                    multiple
+                    required
+                    value={Array.isArray(state.selectedMolecules) ? state.selectedMolecules : []}
+                    onChange={(e) =>
+                      setState((prev) => ({
+                        ...prev,
+                        selectedMolecules: Array.isArray(e.target.value) ? e.target.value : [],
+                      }))
+                    }
+                    input={<OutlinedInput label="Molecules" />}
+                    renderValue={(selected) => (
+                      <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
+                        {(Array.isArray(selected) ? selected : []).map((value) => {
+                          const molecule = state.molecules.find((m) => m.id === value);
+                          return (
+                            <Chip key={value} label={molecule ? molecule.molecule_name : value} />
+                          );
+                        })}
+                      </Box>
+                    )}
+                    sx={{ width: 350, height: 40 }}
+                  >
+                    {state.molecules.map((molecule) => (
+                      <MenuItem key={molecule.id} value={molecule.id}>
+                        {molecule.molecule_name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Tooltip title="Manage Molecules">
+                <IconButton
+                  color="primary"
+                  onClick={() => navigate("/molecule")}
+                  sx={{ ml: 1, alignSelf: "center" }}
+                >
+                  <Icon>science</Icon>
+                </IconButton>
+              </Tooltip>
               <TextField
                 label="Vendor commission"
                 name="commission"
@@ -1629,6 +1746,7 @@ function Products() {
                 fullWidth
                 margin="normal"
               />
+
               <TextField
                 label="Manufacturer"
                 name="manufacturer"
@@ -1668,7 +1786,7 @@ function Products() {
                 margin="normal"
               />
               <TextField
-                label="Discount Price Percentage"
+                label="Discount Price Percentage *"
                 name="discount_price_percentage"
                 type="number"
                 value={newProduct.discount_price_percentage}
@@ -1687,6 +1805,16 @@ function Products() {
                 InputProps={{
                   readOnly: true,
                 }}
+              />
+              <TextField
+                label="Composition"
+                name="composition"
+                value={newProduct.composition}
+                onChange={handleInputChange}
+                fullWidth
+                margin="normal"
+                multiline
+                rows={2}
               />
               {/* <TextField
                 label="Expire Date"
@@ -2002,16 +2130,6 @@ function Products() {
                 </Button>
               </Grid>
               <TextField
-                label="Composition"
-                name="composition"
-                value={newProduct.composition}
-                onChange={handleInputChange}
-                fullWidth
-                margin="normal"
-                multiline
-                rows={2}
-              />
-              <TextField
                 label="Direction to Use"
                 name="direction_to_use"
                 value={newProduct.direction_to_use}
@@ -2170,41 +2288,6 @@ function Products() {
                 multiline
                 rows={2}
               />
-            </Grid>
-
-            <Grid item xs={12} md={6}>
-              <FormControl fullWidth margin="normal">
-                <InputLabel>Molecule/Composition</InputLabel>
-                <Select
-                  multiple
-                  required
-                  value={Array.isArray(state.selectedMolecules) ? state.selectedMolecules : []}
-                  onChange={(e) =>
-                    setState((prev) => ({
-                      ...prev,
-                      selectedMolecules: Array.isArray(e.target.value) ? e.target.value : [],
-                    }))
-                  }
-                  input={<OutlinedInput label="Molecules" />}
-                  renderValue={(selected) => (
-                    <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
-                      {(Array.isArray(selected) ? selected : []).map((value) => {
-                        const molecule = state.molecules.find((m) => m.id === value);
-                        return (
-                          <Chip key={value} label={molecule ? molecule.molecule_name : value} />
-                        );
-                      })}
-                    </Box>
-                  )}
-                  sx={{ width: 350, height: 40 }}
-                >
-                  {state.molecules.map((molecule) => (
-                    <MenuItem key={molecule.id} value={molecule.id}>
-                      {molecule.molecule_name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
             </Grid>
 
             <Grid item xs={12} md={6}>
