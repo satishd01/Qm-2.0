@@ -60,7 +60,13 @@ function Packages() {
   const [packageDialog, setPackageDialog] = useState({
     open: false,
     mode: "create",
-    data: { id: null, name: "" },
+    data: {
+      id: null,
+      name: "",
+      mrp: "",
+      discount: "",
+      sellingPrice: "",
+    },
   });
 
   // Package data management states
@@ -86,6 +92,34 @@ function Packages() {
   const baseUrl = process.env.REACT_APP_BASE_URL || "https://quickmeds.sndktech.online";
   const xAuthHeader =
     process.env.REACT_APP_X_AUTHORIZATION || "RGVlcGFrS3-VzaHdhaGE5Mzk5MzY5ODU0-QWxoblBvb2ph";
+
+  // Calculate selling price based on MRP and discount
+  const calculateSellingPrice = (mrp, discount) => {
+    if (!mrp || !discount) return "";
+    const mrpValue = parseFloat(mrp);
+    const discountValue = parseFloat(discount);
+    if (isNaN(mrpValue) || isNaN(discountValue)) return "";
+
+    const sellingPrice = mrpValue - (mrpValue * discountValue) / 100;
+    return sellingPrice.toFixed(2);
+  };
+
+  // Handle price field changes
+  const handlePriceChange = (field, value) => {
+    const newData = { ...packageDialog.data, [field]: value };
+
+    if (field === "mrp" || field === "discount") {
+      newData.sellingPrice = calculateSellingPrice(
+        field === "mrp" ? value : newData.mrp,
+        field === "discount" ? value : newData.discount
+      );
+    }
+
+    setPackageDialog({
+      ...packageDialog,
+      data: newData,
+    });
+  };
 
   // Fetch all packages
   const fetchPackages = async () => {
@@ -174,6 +208,13 @@ function Packages() {
       const token = localStorage.getItem("token");
       setLoading(true);
 
+      const packageData = {
+        name: packageDialog.data.name,
+        mrp: parseFloat(packageDialog.data.mrp),
+        discount: parseFloat(packageDialog.data.discount),
+        sellingPrice: parseFloat(packageDialog.data.sellingPrice),
+      };
+
       const response = await fetch(`${baseUrl}/package.add`, {
         method: "POST",
         headers: {
@@ -181,7 +222,7 @@ function Packages() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ name: packageDialog.data.name }),
+        body: JSON.stringify(packageData),
       });
 
       const data = await response.json();
@@ -206,6 +247,14 @@ function Packages() {
       const token = localStorage.getItem("token");
       setLoading(true);
 
+      const packageData = {
+        id: packageDialog.data.id,
+        name: packageDialog.data.name,
+        mrp: parseFloat(packageDialog.data.mrp),
+        discount: parseFloat(packageDialog.data.discount),
+        sellingPrice: parseFloat(packageDialog.data.sellingPrice),
+      };
+
       const response = await fetch(`${baseUrl}/package.update`, {
         method: "PUT",
         headers: {
@@ -213,7 +262,7 @@ function Packages() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(packageDialog.data),
+        body: JSON.stringify(packageData),
       });
 
       const data = await response.json();
@@ -342,6 +391,21 @@ function Packages() {
     { Header: "ID", accessor: "id" },
     { Header: "Name", accessor: "name" },
     {
+      Header: "MRP",
+      accessor: "mrp",
+      Cell: ({ value }) => `₹${value || "0.00"}`,
+    },
+    {
+      Header: "Discount",
+      accessor: "discount",
+      Cell: ({ value }) => `${value || "0"}%`,
+    },
+    {
+      Header: "Selling Price",
+      accessor: "sellingPrice",
+      Cell: ({ value }) => `₹${value || "0.00"}`,
+    },
+    {
       Header: "Actions",
       accessor: "actions",
       Cell: ({ row }) => (
@@ -410,7 +474,7 @@ function Packages() {
                       setPackageDialog({
                         open: true,
                         mode: "create",
-                        data: { id: null, name: "" },
+                        data: { id: null, name: "", mrp: "", discount: "", sellingPrice: "" },
                       })
                     }
                   >
@@ -437,6 +501,8 @@ function Packages() {
       <Dialog
         open={packageDialog.open}
         onClose={() => setPackageDialog({ ...packageDialog, open: false })}
+        fullWidth
+        maxWidth="sm"
       >
         <DialogTitle>
           {packageDialog.mode === "create" ? "Create New Package" : "Edit Package"}
@@ -456,6 +522,35 @@ function Packages() {
               })
             }
           />
+          <TextField
+            margin="dense"
+            label="MRP (₹)"
+            fullWidth
+            variant="standard"
+            type="number"
+            value={packageDialog.data.mrp}
+            onChange={(e) => handlePriceChange("mrp", e.target.value)}
+          />
+          <TextField
+            margin="dense"
+            label="Discount (%)"
+            fullWidth
+            variant="standard"
+            type="number"
+            value={packageDialog.data.discount}
+            onChange={(e) => handlePriceChange("discount", e.target.value)}
+          />
+          <TextField
+            margin="dense"
+            label="Selling Price (₹)"
+            fullWidth
+            variant="standard"
+            type="number"
+            value={packageDialog.data.sellingPrice}
+            InputProps={{
+              readOnly: true,
+            }}
+          />
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setPackageDialog({ ...packageDialog, open: false })}>
@@ -463,7 +558,9 @@ function Packages() {
           </Button>
           <Button
             onClick={packageDialog.mode === "create" ? handleCreatePackage : handleUpdatePackage}
-            disabled={!packageDialog.data.name}
+            disabled={
+              !packageDialog.data.name || !packageDialog.data.mrp || !packageDialog.data.discount
+            }
           >
             {packageDialog.mode === "create" ? "Create" : "Update"}
           </Button>
@@ -494,7 +591,7 @@ function Packages() {
               sx={{
                 width: 600,
                 "& .MuiSelect-select": {
-                  minHeight: "50px", // 👈 This increases the visible height
+                  minHeight: "60px",
                   display: "flex",
                   alignItems: "center",
                 },
@@ -545,7 +642,7 @@ function Packages() {
               sx={{
                 width: 600,
                 "& .MuiSelect-select": {
-                  minHeight: "50px", // 👈 This increases the visible height
+                  minHeight: "60px",
                   display: "flex",
                   alignItems: "center",
                 },
