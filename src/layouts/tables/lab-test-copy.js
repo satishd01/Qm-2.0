@@ -29,7 +29,6 @@ import {
   RemoveCircle as RemoveCircleIcon,
   CloudUpload as CloudUploadIcon,
   Schedule as ScheduleIcon,
-  Edit as EditIcon,
 } from "@mui/icons-material";
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
@@ -68,8 +67,6 @@ function LabTests() {
       labTestId: null,
       loading: false,
     },
-    isEditing: false,
-    currentLabTestId: null,
   });
   const [formData, setFormData] = useState({
     bannerImage: "",
@@ -84,7 +81,7 @@ function LabTests() {
     sampleRequired: "",
     recommendedFor: "",
     reportTime: "",
-    others: [], // Ensure this is initialized as an empty array
+    others: [],
     containsMultipleTest: [],
     faq: [],
     discount: 0,
@@ -202,44 +199,6 @@ function LabTests() {
       }));
     }
   }, [baseUrl, xAuthHeader]);
-
-  const fetchLabTestDetails = useCallback(
-    async (id) => {
-      try {
-        const token = localStorage.getItem("token");
-        const response = await fetch(`${baseUrl}/labTest.get/${id}`, {
-          headers: {
-            "x-authorization": xAuthHeader,
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data?.message || "Failed to fetch lab test details");
-
-        if (data?.labTest) {
-          // Ensure arrays are properly initialized if they're null/undefined
-          const labTestData = {
-            ...data.labTest,
-            others: data.labTest.others || [],
-            faq: data.labTest.faq || [],
-            containsMultipleTest: data.labTest.containsMultipleTest || [],
-          };
-          setFormData(labTestData);
-        }
-      } catch (error) {
-        console.error("Error fetching lab test details:", error);
-        setState((prev) => ({
-          ...prev,
-          snackbar: {
-            open: true,
-            message: error.message,
-            severity: "error",
-          },
-        }));
-      }
-    },
-    [baseUrl, xAuthHeader]
-  );
 
   useEffect(() => {
     fetchAuthors();
@@ -371,53 +330,6 @@ function LabTests() {
     }));
   };
 
-  const handleOpenEditDialog = (labTest) => {
-    setDialogState((prev) => ({
-      ...prev,
-      open: true,
-      isEditing: true,
-      currentLabTestId: labTest.id,
-    }));
-
-    // Parse the FAQ field if it's a string
-    let faqArray = [];
-    try {
-      faqArray = labTest.faq ? JSON.parse(labTest.faq) : [];
-      // Convert from schema format to actual values if needed
-      if (Array.isArray(faqArray)) {
-        faqArray = faqArray.map((item) => ({
-          question: item.question?.defaultValue || "",
-          answer: item.answer?.defaultValue || "",
-        }));
-      }
-    } catch (e) {
-      console.error("Error parsing FAQ:", e);
-      faqArray = [];
-    }
-
-    setFormData({
-      bannerImage: labTest.bannerImage || "",
-      coverImage: labTest.coverImage || "",
-      prescription: labTest.Prescription || "", // Note capital P
-      isPrescriptionRequired: labTest.isPrescriptionRequired || false,
-      testName: labTest.testName || "",
-      description: labTest.description || "",
-      mrp: labTest.mrp || 0,
-      sellingPrice: labTest.sellingPrice || 0,
-      preparations: labTest.preparations || "",
-      sampleRequired: labTest.sampleRequired || "",
-      recommendedFor: labTest.recommendedFor || "",
-      reportTime: labTest.reportTime || "",
-      others: labTest.others || [],
-      containsMultipleTest: labTest.containsMultipleTest || [],
-      faq: faqArray,
-      discount: labTest.discount ? parseFloat(labTest.discount) : 0,
-      fasting: labTest.fasting || false,
-      compiled_by: labTest.compiled_by || "",
-      reviewed_by: labTest.reviewed_by || "",
-    });
-  };
-
   const handleSubmit = async () => {
     try {
       const token = localStorage.getItem("token");
@@ -432,104 +344,64 @@ function LabTests() {
           snackbar: {
             open: true,
             message:
-              "Test Name, Sample, Mrp, Selling Price, Discount, Prescription Required are required",
+              "Test Name ,Sample,Mrp,Selling Price,Discount,Prescription Required are required",
             severity: "warning",
           },
         }));
         return;
       }
 
-      // Prepare the data for submission
-      const submissionData = {
-        ...formData,
-        // Ensure FAQ is properly formatted
-        faq: JSON.stringify(
-          formData.faq.map((item) => ({
-            question: { defaultValue: item.question },
-            answer: { defaultValue: item.answer },
-          }))
-        ),
-        // Match API field names
-        Prescription: formData.prescription,
-        // Remove any empty fields
-        ...Object.fromEntries(
-          Object.entries(formData).filter(
-            ([_, value]) => value !== null && value !== undefined && value !== ""
-          )
-        ),
-      };
-
-      // Remove id if not editing
-      if (!dialogState.isEditing) {
-        delete submissionData.id;
+      function removeEmptyFields(obj) {
+        return Object.entries(obj).reduce((acc, [key, value]) => {
+          if (
+            value !== null &&
+            value !== undefined &&
+            (typeof value !== "string" || value.trim() !== "") &&
+            (!Array.isArray(value) || value.length > 0)
+          ) {
+            acc[key] = value;
+          }
+          return acc;
+        }, {});
       }
 
-      const endpoint = dialogState.isEditing
-        ? `${baseUrl}/labTest.update`
-        : `${baseUrl}/labTest.add`;
+      const cleanedData = removeEmptyFields({
+        ...formData,
+        others: (formData.others || []).filter((item) => item.title || item.description),
+        faq: (formData.faq || []).filter((item) => item.question || item.answer),
+      });
 
-      const method = dialogState.isEditing ? "PUT" : "POST";
+      // Clean empty items from arrays
+      // const cleanedData = {
+      //   ...formData,
+      //   others: (formData.others || []).filter((item) => item.title || item.description),
+      //   faq: (formData.faq || []).filter((item) => item.question || item.answer),
+      // };
 
-      const response = await fetch(endpoint, {
-        method,
+      const response = await fetch(`${baseUrl}/labTest.add`, {
+        method: "POST",
         headers: {
           "x-authorization": xAuthHeader,
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(
-          dialogState.isEditing
-            ? { ...submissionData, id: dialogState.currentLabTestId }
-            : submissionData
-        ),
+        body: JSON.stringify(cleanedData),
       });
 
       const data = await response.json();
-      if (!response.ok) throw new Error(data?.message || "Failed to process lab test");
+      if (!response.ok) throw new Error(data?.message || "Failed to create lab test");
 
       setState((prev) => ({
         ...prev,
         snackbar: {
           open: true,
-          message: dialogState.isEditing
-            ? "Lab test updated successfully!"
-            : "Lab test created successfully!",
+          message: "Lab test created successfully!",
           severity: "success",
         },
+        currentPage: 1, // Reset to first page
       }));
-
-      // Close dialog and refresh data
-      setDialogState((prev) => ({
-        ...prev,
-        open: false,
-        isEditing: false,
-        currentLabTestId: null,
-      }));
-
-      setFormData({
-        // Reset to initial state
-        bannerImage: "",
-        coverImage: "",
-        prescription: "",
-        isPrescriptionRequired: false,
-        testName: "",
-        description: "",
-        mrp: 0,
-        sellingPrice: 0,
-        preparations: "",
-        sampleRequired: "",
-        recommendedFor: "",
-        reportTime: "",
-        others: [],
-        containsMultipleTest: [],
-        faq: [],
-        discount: 0,
-        fasting: false,
-        compiled_by: "",
-        reviewed_by: "",
-      });
-
-      await fetchLabTests();
+      setDialogState((prev) => ({ ...prev, open: false }));
+      await fetchLabTests(); // Refresh the list
     } catch (error) {
       console.error("Submission error:", error);
       setState((prev) => ({
@@ -664,27 +536,15 @@ function LabTests() {
       Header: "Actions",
       accessor: "actions",
       Cell: ({ row }) => (
-        <div>
-          <Button
-            variant="contained"
-            color="info"
-            size="small"
-            startIcon={<EditIcon />}
-            onClick={() => handleOpenEditDialog(row.original)}
-            sx={{ mr: 1 }}
-          >
-            Edit
-          </Button>
-          <Button
-            variant="contained"
-            color="error"
-            size="small"
-            startIcon={<ScheduleIcon />}
-            onClick={() => handleOpenSlotDialog(row.original.id)}
-          >
-            Add Slot
-          </Button>
-        </div>
+        <Button
+          variant="contained"
+          color="error"
+          size="small"
+          startIcon={<ScheduleIcon />}
+          onClick={() => handleOpenSlotDialog(row.original.id)}
+        >
+          Add Slot
+        </Button>
       ),
     },
   ];
@@ -793,42 +653,14 @@ function LabTests() {
       </MDBox>
       <Footer />
 
-      {/* Create/Edit Lab Test Dialog */}
+      {/* Create Lab Test Dialog */}
       <Dialog
         open={dialogState.open}
-        onClose={() => {
-          setDialogState((prev) => ({
-            ...prev,
-            open: false,
-            isEditing: false,
-            currentLabTestId: null,
-          }));
-          setFormData({
-            bannerImage: "",
-            coverImage: "",
-            prescription: "",
-            isPrescriptionRequired: false,
-            testName: "",
-            description: "",
-            mrp: 0,
-            sellingPrice: 0,
-            preparations: "",
-            sampleRequired: "",
-            recommendedFor: "",
-            reportTime: "",
-            others: [],
-            containsMultipleTest: [],
-            faq: [],
-            discount: 0,
-            fasting: false,
-            compiled_by: "",
-            reviewed_by: "",
-          });
-        }}
+        onClose={() => setDialogState((prev) => ({ ...prev, open: false }))}
         fullWidth
         maxWidth="md"
       >
-        <DialogTitle>{dialogState.isEditing ? "Edit Lab Test" : "Create New Lab Test"}</DialogTitle>
+        <DialogTitle>Create New Lab Test</DialogTitle>
         <DialogContent dividers>
           <Grid container spacing={2}>
             {/* Basic Information */}
@@ -1084,41 +916,40 @@ function LabTests() {
               <MDTypography variant="h6" gutterBottom mt={2}>
                 Additional Information
               </MDTypography>
-              {Array.isArray(formData.others) &&
-                formData.others.map((item, index) => (
-                  <MDBox key={`other-${index}`} mb={2} p={2} bgcolor="#f5f5f5" borderRadius={1}>
-                    <MDBox display="flex" justifyContent="space-between" alignItems="center">
-                      <MDTypography variant="subtitle2">Section {index + 1}</MDTypography>
-                      <IconButton
-                        size="small"
-                        onClick={() => handleRemoveSectionItem("others", index)}
-                        color="error"
-                      >
-                        <RemoveCircleIcon fontSize="small" />
-                      </IconButton>
-                    </MDBox>
-                    <TextField
-                      label="Title"
-                      value={item.title || ""}
-                      onChange={(e) =>
-                        handleNestedInputChange("others", index, "title", e.target.value)
-                      }
-                      fullWidth
-                      margin="dense"
-                    />
-                    <TextField
-                      label="Description"
-                      value={item.description || ""}
-                      onChange={(e) =>
-                        handleNestedInputChange("others", index, "description", e.target.value)
-                      }
-                      fullWidth
-                      multiline
-                      rows={2}
-                      margin="dense"
-                    />
+              {(formData.others || []).map((item, index) => (
+                <MDBox key={`other-${index}`} mb={2} p={2} bgcolor="#f5f5f5" borderRadius={1}>
+                  <MDBox display="flex" justifyContent="space-between" alignItems="center">
+                    <MDTypography variant="subtitle2">Section {index + 1}</MDTypography>
+                    <IconButton
+                      size="small"
+                      onClick={() => handleRemoveSectionItem("others", index)}
+                      color="error"
+                    >
+                      <RemoveCircleIcon fontSize="small" />
+                    </IconButton>
                   </MDBox>
-                ))}
+                  <TextField
+                    label="Title"
+                    value={item.title || ""}
+                    onChange={(e) =>
+                      handleNestedInputChange("others", index, "title", e.target.value)
+                    }
+                    fullWidth
+                    margin="dense"
+                  />
+                  <TextField
+                    label="Description"
+                    value={item.description || ""}
+                    onChange={(e) =>
+                      handleNestedInputChange("others", index, "description", e.target.value)
+                    }
+                    fullWidth
+                    multiline
+                    rows={2}
+                    margin="dense"
+                  />
+                </MDBox>
+              ))}
               <Button
                 variant="contained"
                 color="error"
@@ -1135,43 +966,40 @@ function LabTests() {
               <MDTypography variant="h6" gutterBottom mt={2}>
                 Frequently Asked Questions
               </MDTypography>
-              {Array.isArray(formData.faq) &&
-                formData.faq.map((item, index) => (
-                  <MDBox key={`faq-${index}`} mb={2} p={2} bgcolor="#f5f5f5" borderRadius={1}>
-                    <MDBox display="flex" justifyContent="space-between" alignItems="center">
-                      <MDTypography variant="subtitle2">FAQ {index + 1}</MDTypography>
-                      <IconButton
-                        size="small"
-                        onClick={() => handleRemoveSectionItem("faq", index)}
-                        color="error"
-                      >
-                        <RemoveCircleIcon fontSize="small" />
-                      </IconButton>
-                    </MDBox>
-                    <TextField
-                      label="Question"
-                      name="question"
-                      value={item.question || ""}
-                      onChange={(e) =>
-                        handleNestedInputChange("faq", index, "question", e.target.value)
-                      }
-                      fullWidth
-                      margin="dense"
-                    />
-                    <TextField
-                      label="Answer"
-                      name="answer"
-                      value={item.answer || ""}
-                      onChange={(e) =>
-                        handleNestedInputChange("faq", index, "answer", e.target.value)
-                      }
-                      fullWidth
-                      multiline
-                      rows={2}
-                      margin="dense"
-                    />
+              {(formData.faq || []).map((item, index) => (
+                <MDBox key={`faq-${index}`} mb={2} p={2} bgcolor="#f5f5f5" borderRadius={1}>
+                  <MDBox display="flex" justifyContent="space-between" alignItems="center">
+                    <MDTypography variant="subtitle2">FAQ {index + 1}</MDTypography>
+                    <IconButton
+                      size="small"
+                      onClick={() => handleRemoveSectionItem("faq", index)}
+                      color="error"
+                    >
+                      <RemoveCircleIcon fontSize="small" />
+                    </IconButton>
                   </MDBox>
-                ))}
+                  <TextField
+                    label="Question"
+                    value={item.question || ""}
+                    onChange={(e) =>
+                      handleNestedInputChange("faq", index, "question", e.target.value)
+                    }
+                    fullWidth
+                    margin="dense"
+                  />
+                  <TextField
+                    label="Answer"
+                    value={item.answer || ""}
+                    onChange={(e) =>
+                      handleNestedInputChange("faq", index, "answer", e.target.value)
+                    }
+                    fullWidth
+                    multiline
+                    rows={2}
+                    margin="dense"
+                  />
+                </MDBox>
+              ))}
               <Button
                 variant="contained"
                 color="error"
@@ -1182,44 +1010,71 @@ function LabTests() {
                 Add FAQ
               </Button>
             </Grid>
+
+            {/* Prescription and Fasting */}
+            {/* <Grid item xs={12}>
+              <MDTypography variant="h6" gutterBottom mt={2}>
+                Additional Options
+              </MDTypography>
+              <FormGroup>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={formData.isPrescriptionRequired}
+                      onChange={handlePrescriptionRequiredChange}
+                      name="prescriptionRequired"
+                    />
+                  }
+                  label="Prescription Required"
+                />
+                {formData.isPrescriptionRequired && (
+                  <input
+                    type="file"
+                    id="prescriptionInput"
+                    onChange={(e) => handleImageUpload(e, "prescription")}
+                    style={{ display: "none" }}
+                    accept="image/*"
+                  />
+                )}
+                {formData.isPrescriptionRequired && (
+                  <label htmlFor="prescriptionInput">
+                    <Button
+                      component="span"
+                      variant="contained"
+                      color="error"
+                      startIcon={<CloudUploadIcon />}
+                      disabled={dialogState.uploading}
+                      fullWidth
+                    >
+                      {dialogState.uploading ? "Uploading..." : "Upload Prescription"}
+                    </Button>
+                  </label>
+                )}
+                {formData.prescription && (
+                  <MDTypography variant="caption" display="block" noWrap>
+                    {formData.prescription.split("/").pop()}
+                  </MDTypography>
+                )}
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={formData.fasting}
+                      onChange={handleFastingChange}
+                      name="fasting"
+                    />
+                  }
+                  label="Fasting Required"
+                />
+              </FormGroup>
+            </Grid> */}
           </Grid>
         </DialogContent>
         <DialogActions>
-          <Button
-            onClick={() => {
-              setDialogState((prev) => ({
-                ...prev,
-                open: false,
-                isEditing: false,
-                currentLabTestId: null,
-              }));
-              setFormData({
-                bannerImage: "",
-                coverImage: "",
-                prescription: "",
-                isPrescriptionRequired: false,
-                testName: "",
-                description: "",
-                mrp: 0,
-                sellingPrice: 0,
-                preparations: "",
-                sampleRequired: "",
-                recommendedFor: "",
-                reportTime: "",
-                others: [],
-                containsMultipleTest: [],
-                faq: [],
-                discount: 0,
-                fasting: false,
-                compiled_by: "",
-                reviewed_by: "",
-              });
-            }}
-          >
+          <Button onClick={() => setDialogState((prev) => ({ ...prev, open: false }))}>
             Cancel
           </Button>
           <Button onClick={handleSubmit} color="error" variant="contained">
-            {dialogState.isEditing ? "Update Lab Test" : "Create Lab Test"}
+            Create Lab Test
           </Button>
         </DialogActions>
       </Dialog>

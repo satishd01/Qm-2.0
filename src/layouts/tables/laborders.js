@@ -986,7 +986,7 @@ function Orders() {
                   <Table size="small">
                     <TableHead>
                       <TableRow>
-                        <TableCell>Product</TableCell>
+                        <TableCell>Lab Test</TableCell>
                         <TableCell align="right">Quantity</TableCell>
                         <TableCell align="right">Price</TableCell>
                         <TableCell align="right">Total</TableCell>
@@ -995,11 +995,11 @@ function Orders() {
                     <TableBody>
                       {dialogState.currentOrder.products?.map((product, index) => (
                         <TableRow key={index}>
-                          <TableCell>{product.productName || `Product ${index + 1}`}</TableCell>
+                          <TableCell>{product.testName || `Product ${index + 1}`}</TableCell>
                           <TableCell align="right">{product.quantity}</TableCell>
-                          <TableCell align="right">₹{product.price}</TableCell>
+                          <TableCell align="right">₹{product.sellingPrice}</TableCell>
                           <TableCell align="right">
-                            ₹{(product.quantity * product.price).toFixed(2)}
+                            ₹{(product.quantity * product.sellingPrice).toFixed(2)}
                           </TableCell>
                         </TableRow>
                       ))}
